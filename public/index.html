@@ -1,1 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HotWheels Racer Host</title>
+<style>
+:root{--bg:#071a2b;--a:#ff7a18;--t:#eaf2ff}
+html,body{height:100%;margin:0;background:radial-gradient(1200px 700px at 35% 30%, #0b2a48 0%, var(--bg) 55%, #03101c 100%);color:var(--t);font-family:system-ui,Segoe UI,Roboto,Arial}
+.top{display:flex;gap:10px;align-items:center;padding:12px 14px;background:linear-gradient(180deg,#0b2a48,#071a2b);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0}
+.brand{font-weight:900}
+.pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10);font-weight:800}
+button,select{cursor:pointer;border-radius:10px;padding:10px 12px;font-weight:900;color:var(--t);background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14)}
+button.primary{background:var(--a);color:#1c1207;border:1px solid rgba(0,0,0,.18)}
+.wrap{display:grid;grid-template-columns:1fr 320px;gap:14px;padding:14px;max-width:1400px;margin:0 auto}
+.stage{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden;position:relative}
+canvas{width:100%;height:720px;display:block}
+.side{display:flex;flex-direction:column;gap:12px}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px}
+.card h3{margin:0 0 8px 0;font-size:13px;text-transform:uppercase;opacity:.75}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.players{display:flex;flex-direction:column;gap:8px}
+.player{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.10)}
+.badge{font-weight:900;background:rgba(255,122,24,.18);border:1px solid rgba(255,122,24,.35);border-radius:999px;padding:4px 8px}
+.overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);backdrop-filter:blur(3px)}
+.overlay.show{display:flex}
+.modal{background:linear-gradient(180deg,#ff8c33,#ff6f00);color:#211307;border-radius:18px;padding:18px;min-width:320px;border:1px solid rgba(0,0,0,.2);text-align:center}
+.modal .big{font-size:26px;font-weight:1000}
+</style></head>
+<body>
+<div class="top">
+  <div class="brand">🏁 HotWheels Multiplayer Racer <span class="pill">v5.1</span></div>
+  <button id="copyLink">Copy Controller Link</button>
+  <button class="primary" id="createRoom">Create Room</button>
+  <span class="pill" id="roomCode">----</span>
+  <span class="pill" id="conn">Server: connecting…</span>
+</div>
 
+<div class="wrap">
+  <div class="stage">
+    <canvas id="c" width="1200" height="720"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="modal">
+        <div class="big">WINNER!</div>
+        <h2 id="winnerName">—</h2>
+        <div id="winnerMeta">—</div>
+        <div style="height:10px"></div>
+        <button id="backToBuild" class="primary">Back to Build</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card">
+      <h3>Race</h3>
+      <div class="row">
+        <label>Track</label>
+        <select id="trackSel"></select>
+      </div>
+      <div class="row">
+        <label>Laps</label>
+        <select id="lapsSel"><option>1</option><option>2</option><option selected>3</option><option>5</option></select>
+        <button id="driveBtn">Drive Mode</button>
+        <button id="resetBtn">Reset Cars</button>
+        <button id="clearBtn">Clear (custom)</button>
+      </div>
+      <div style="font-size:12px;opacity:.75">v5.1: free steering + wall bounce + car crashes.</div>
+    </div>
+
+    <div class="card">
+      <h3>Players</h3>
+      <div class="players" id="players"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="host.js"></script>
+</body></html>

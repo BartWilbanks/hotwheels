@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Controller</title>
+<style>
+:root{--bg:#0a0f14;--a:#ff7a18;--t:#eaf2ff}
+html,body{height:100%;margin:0;background:radial-gradient(900px 600px at 50% 20%, #1a2633, var(--bg));color:var(--t);font-family:system-ui,Segoe UI,Roboto,Arial}
+.wrap{max-width:520px;margin:0 auto;padding:18px 14px;display:flex;flex-direction:column;gap:14px}
+.title{font-weight:900;font-size:22px;text-align:center}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px}
+input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px;color:var(--t);font-weight:800}
+button{width:100%;border:0;border-radius:14px;padding:14px;font-weight:900;background:var(--a);color:#1c1207}
+.small{background:rgba(255,255,255,.10);color:var(--t);border:1px solid rgba(255,255,255,.14)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.big{height:68px;font-size:18px}
+.row{display:flex;gap:10px}.row button{flex:1}
+.status{font-size:12px;opacity:.75;text-align:center}
+.hint{font-size:12px;opacity:.75}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="title">📱 Phone Controller</div>
+  <div class="status" id="status">Connecting…</div>
+
+  <div class="card">
+    <div class="hint">Room code</div>
+    <input id="room" placeholder="ABCD"/>
+    <div style="height:10px"></div>
+    <div class="hint">Name</div>
+    <input id="name" placeholder="Bart"/>
+    <div style="height:10px"></div>
+    <button id="join">Join Room</button>
+    <div style="height:10px"></div>
+    <div class="grid">
+      <button id="enableTilt" class="small">Enable Tilt</button>
+      <button id="calTilt" class="small">Calibrate</button>
+    </div>
+    <div class="hint" style="margin-top:10px">iPhone needs permission for tilt. Tap Enable Tilt, allow, then Calibrate while phone is level.</div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <button id="gas" class="big">⬆️ GAS</button>
+      <button id="brake" class="big">⬇️ BRAKE</button>
+    </div>
+    <div style="height:10px"></div>
+    <div class="row">
+      <button id="left" class="big">⬅️</button>
+      <button id="right" class="big">➡️</button>
+    </div>
+    <div class="hint" style="margin-top:10px">Hold GAS. Hold LEFT/RIGHT. Tilt adds steering if enabled.</div>
+  </div>
+</div>
+
+<script type="module" src="controller.js"></script>
+</body></html>
