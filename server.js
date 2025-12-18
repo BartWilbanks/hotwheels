@@ -4,218 +4,169 @@ const http = require("http");
 const WebSocket = require("ws");
 
 const app = express();
-app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
+app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/healthz", (req,res)=>res.status(200).send("ok"));
+app.get("/", (req, res) => res.redirect("/index.html"));
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const rooms = new Map();
-
-function makeCode() {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function rid() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let s = "";
-  for (let i=0;i<4;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
 }
 
-function safeSend(ws, obj){
-  if (ws.readyState !== WebSocket.OPEN) return;
+const rooms = new Map(); // code -> {createdAt, hostWs, players: Map(pid -> player), trackState}
+
+function safeSend(ws, obj) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify(obj));
 }
 
-function broadcast(room, obj){
-  for (const ws of room.sockets){
-    safeSend(ws, obj);
-  }
+function broadcastRoom(code, obj) {
+  const room = rooms.get(code);
+  if (!room) return;
+  for (const p of room.players.values()) safeSend(p.ws, obj);
+  safeSend(room.hostWs, obj);
 }
 
-function createRoom(){
-  let code;
-  do { code = makeCode(); } while (rooms.has(code));
-  const room = {
-    code,
-    hostId: null,
-    sockets: new Set(),
-    players: new Map(),
-    mode: "build",
-    track: { presetId: "01", customPieces: [], width: 140, lapsToWin: 3 },
-    winner: null,
-    createdAt: Date.now()
-  };
-  rooms.set(code, room);
-  return room;
-}
-
-function roomSnapshot(room){
+function roomSnapshot(code) {
+  const room = rooms.get(code);
+  if (!room) return null;
+  const players = [...room.players.values()].map(p => ({
+    id: p.id, name: p.name, color: p.color, connected: true
+  }));
   return {
-    code: room.code,
-    mode: room.mode,
-    track: room.track,
-    players: Array.from(room.players.values()).map(p=>({
-      id:p.id, name:p.name, color:p.color, lap:p.lap||0, finished: !!p.finished
-    })),
-    winner: room.winner
+    code,
+    players,
+    trackState: room.trackState || null,
+    started: !!(room.trackState && room.trackState.mode === "drive")
   };
-}
-
-let nextClientId = 1;
-function newClientId(){ return String(nextClientId++); }
-
-function randomColor(){
-  const colors = ["#ff3b30","#34c759","#0a84ff","#ff9f0a","#bf5af2","#64d2ff","#ffd60a","#ff375f"];
-  return colors[Math.floor(Math.random()*colors.length)];
 }
 
 wss.on("connection", (ws) => {
-  ws.id = newClientId();
-  ws.role = "unknown";
-  ws.roomCode = null;
-  ws.playerId = null;
+  ws.on("message", (msg) => {
+    let data;
+    try { data = JSON.parse(msg.toString()); } catch { return; }
+    const t = data.type;
 
-  safeSend(ws, { type:"hello", id: ws.id });
-
-  ws.on("message", (buf) => {
-    let msg;
-    try { msg = JSON.parse(buf.toString()); } catch { return; }
-
-    if (msg.type === "create_room") {
-      const room = createRoom();
-      ws.role = "host";
-      ws.roomCode = room.code;
-      room.hostId = ws.id;
-      room.sockets.add(ws);
-      safeSend(ws, { type:"room_created", room: roomSnapshot(room) });
-      return;
-    }
-
-    if (msg.type === "join_room") {
-      const code = (msg.code||"").toUpperCase().trim();
-      const room = rooms.get(code);
-      if (!room){
-        safeSend(ws, { type:"error", message:"Room not found" });
-        return;
-      }
-      ws.roomCode = code;
-      ws.role = "player";
-      room.sockets.add(ws);
-
-      const name = String(msg.name||"Player").slice(0,18).trim() || "Player";
-      const playerId = "p_" + ws.id;
-      ws.playerId = playerId;
-
-      room.players.set(playerId, {
-        id: playerId,
-        name,
-        color: randomColor(),
-        inputs: { gas:false, brake:false, left:false, right:false, tilt:0 },
-        lap: 0,
-        finished: false
+    if (t === "host_create_room") {
+      let code = rid();
+      while (rooms.has(code)) code = rid();
+      rooms.set(code, {
+        createdAt: Date.now(),
+        hostWs: ws,
+        players: new Map(),
+        trackState: { mode: "build", trackId: "t1", custom: null, lapsToWin: 3 }
       });
-
-      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
-      safeSend(ws, { type:"joined", room: roomSnapshot(room), playerId });
+      ws.__role = "host";
+      ws.__room = code;
+      safeSend(ws, { type:"room_created", code, snapshot: roomSnapshot(code) });
       return;
     }
 
-    const room = ws.roomCode ? rooms.get(ws.roomCode) : null;
-    if (!room) return;
-
-    if (msg.type === "set_track") {
-      if (ws.role !== "host") return;
-      const t = msg.track || {};
-      room.track = {
-        presetId: String(t.presetId || room.track.presetId),
-        customPieces: Array.isArray(t.customPieces) ? t.customPieces.slice(0,600) : [],
-        width: Number(t.width || room.track.width || 140),
-        lapsToWin: Math.max(1, Math.min(9, Number(t.lapsToWin || room.track.lapsToWin || 3)))
+    if (t === "host_set_state") {
+      const code = ws.__room || data.code;
+      const room = rooms.get(code);
+      if (!room) return;
+      room.hostWs = ws;
+      // merge allowed fields
+      room.trackState = {
+        ...(room.trackState || {}),
+        ...(data.state || {})
       };
-      room.mode = "build";
-      room.winner = null;
-      for (const p of room.players.values()){ p.lap=0; p.finished=false; }
-      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+      broadcastRoom(code, { type:"room_update", snapshot: roomSnapshot(code) });
       return;
     }
 
-    if (msg.type === "set_mode") {
-      if (ws.role !== "host") return;
-      const m = msg.mode;
-      if (!["build","drive","winner"].includes(m)) return;
-      room.mode = m;
-      if (m !== "winner") room.winner = null;
-      if (m === "build"){
-        for (const p of room.players.values()){ p.lap=0; p.finished=false; }
-      }
-      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+    if (t === "player_join") {
+      const code = (data.code || "").toUpperCase();
+      const room = rooms.get(code);
+      if (!room) { safeSend(ws, { type:"join_error", message:"Room not found. Ask host to Create Room."}); return; }
+
+      const id = "p_" + Math.random().toString(16).slice(2, 10);
+      const palette = ["#00E5FF","#FFEA00","#FF1744","#76FF03","#FF9100","#B388FF","#1DE9B6","#FF80AB"];
+      const color = palette[Math.floor(Math.random()*palette.length)];
+      const name = (data.name || "Player").slice(0, 18);
+
+      const player = { id, name, color, ws, input: {gas:0, brake:0, steer:0}, lastSeen: Date.now() };
+      room.players.set(id, player);
+      ws.__role = "player";
+      ws.__room = code;
+      ws.__pid = id;
+
+      // send join ack to player
+      safeSend(ws, { type:"join_ok", code, playerId:id, snapshot: roomSnapshot(code) });
+
+      // notify host + others
+      broadcastRoom(code, { type:"room_update", snapshot: roomSnapshot(code) });
       return;
     }
 
-    if (msg.type === "reset_cars") {
-      if (ws.role !== "host") return;
-      broadcast(room, { type:"reset_cars" });
-      return;
-    }
-
-    if (msg.type === "clear_custom") {
-      if (ws.role !== "host") return;
-      room.track.customPieces = [];
-      room.track.presetId = String(msg.presetId || room.track.presetId || "01");
-      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
-      return;
-    }
-
-    if (msg.type === "input") {
-      if (ws.role !== "player") return;
-      const p = room.players.get(ws.playerId);
+    if (t === "player_input") {
+      const code = ws.__room || (data.code || "").toUpperCase();
+      const room = rooms.get(code);
+      if (!room) return;
+      const pid = ws.__pid || data.playerId;
+      const p = room.players.get(pid);
       if (!p) return;
-      const upd = msg.input || {};
-      const i = p.inputs;
-      if (typeof upd.gas === "boolean") i.gas = upd.gas;
-      if (typeof upd.brake === "boolean") i.brake = upd.brake;
-      if (typeof upd.left === "boolean") i.left = upd.left;
-      if (typeof upd.right === "boolean") i.right = upd.right;
-      if (typeof upd.tilt === "number") i.tilt = Math.max(-1, Math.min(1, upd.tilt));
-      // Broadcast to all so host receives it even if it reconnects
-      broadcast(room, { type:"player_input", playerId: p.id, input: i });
+      p.input = {
+        gas: data.gas ? 1 : 0,
+        brake: data.brake ? 1 : 0,
+        steer: Math.max(-1, Math.min(1, Number(data.steer || 0)))
+      };
+      p.lastSeen = Date.now();
+      // forward to host (host drives simulation)
+      safeSend(room.hostWs, { type:"inputs", inputs: [{ id: pid, input: p.input }] });
       return;
     }
 
-    if (msg.type === "lap_update") {
-      if (ws.role !== "host") return;
-      const { playerId, lap, finished } = msg;
-      const p = room.players.get(playerId);
-      if (!p) return;
-      if (typeof lap === "number") p.lap = lap;
-      if (typeof finished === "boolean") p.finished = finished;
-      if (finished && !room.winner){
-        room.winner = { playerId: p.id, name: p.name, color: p.color };
-        room.mode = "winner";
-      }
-      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+    if (t === "host_ping") {
+      const code = ws.__room || data.code;
+      const room = rooms.get(code);
+      if (!room) return;
+      safeSend(ws, { type:"pong", ts: Date.now() });
       return;
     }
   });
 
   ws.on("close", () => {
-    const room = ws.roomCode ? rooms.get(ws.roomCode) : null;
-    if (room){
-      room.sockets.delete(ws);
-      if (ws.role === "player" && ws.playerId){
-        room.players.delete(ws.playerId);
-      }
-      if (ws.role === "host"){
-        room.hostId = null;
-        room.mode = "build";
-        room.winner = null;
-      }
-      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
-      if (room.sockets.size === 0){
-        rooms.delete(room.code);
+    const role = ws.__role;
+    const code = ws.__room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (role === "host") {
+      // keep room alive briefly; if host reconnects it can continue
+      room.hostWs = null;
+      broadcastRoom(code, { type:"host_disconnected" });
+    } else if (role === "player") {
+      const pid = ws.__pid;
+      if (pid && room.players.has(pid)) {
+        room.players.delete(pid);
+        broadcastRoom(code, { type:"room_update", snapshot: roomSnapshot(code) });
       }
     }
+    // cleanup empty rooms
+    if (!room.hostWs && room.players.size === 0) rooms.delete(code);
   });
 });
+
+// periodic cleanup stale players
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, room] of rooms.entries()) {
+    for (const [pid, p] of room.players.entries()) {
+      if (p.ws.readyState !== WebSocket.OPEN || (now - p.lastSeen) > 60_000) {
+        try { p.ws.close(); } catch {}
+        room.players.delete(pid);
+      }
+    }
+    if (!room.hostWs && room.players.size === 0) rooms.delete(code);
+  }
+}, 10_000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server listening on port", PORT));

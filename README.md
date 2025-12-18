@@ -1,6 +1,4 @@
-# HotWheels Multiplayer Racer (Top-down arcade v4.1)
-
-This project hosts a **host screen** (laptop/TV) and **phone controllers** (players join via mobile).
+# HotWheels Top-down Arcade v5 (Multiplayer)
 
 ## Run locally
 ```bash
@@ -8,11 +6,11 @@ npm install
 npm start
 ```
 
-Then open:
+Open:
 - Host: http://localhost:3000/
 - Controller: http://localhost:3000/controller.html
 
-## Deploy on Render
-- Build command: `npm install`
-- Start command: `npm start`
-- Root directory: (blank)
+## Deploy (Render)
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Root Directory: (blank)
