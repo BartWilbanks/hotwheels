@@ -1,15 +1,1047 @@
-
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>HotWheels Racer Host</title></head>
-<body style="background:#0a2342;color:white;font-family:sans-serif">
-<h1>🏁 HotWheels Multiplayer Racer (Host)</h1>
-<p>This is the host screen.</p>
-<ul>
-<li>Choose a preset track</li>
-<li>Or design your own</li>
-<li>Players join from phones</li>
-</ul>
-<p><b>Status:</b> Server Connected</p>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HotWheels Multiplayer Racer (Host)</title>
+  <style>
+    :root{
+      --navy:#0A2342;
+      --green:#6BBF59;
+      --orange:#ff6a00;
+      --orange2:#ff8a2b;
+      --ink:#0b1220;
+      --panel:#121c33;
+      --panel2:#0f1830;
+      --white:#ffffff;
+      --muted:rgba(255,255,255,.75);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Arial;background:radial-gradient(1200px 600px at 30% 20%, #1a2d58 0%, #091023 60%, #070c18 100%);color:var(--white)}
+    #top{
+      position:sticky;top:0;z-index:20;
+      display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+      padding:10px 12px;background:linear-gradient(90deg, var(--navy), #07162f);
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    .brand{display:flex;gap:10px;align-items:center;font-weight:900;font-size:18px}
+    .flag{width:18px;height:18px;border-radius:4px;background:
+      conic-gradient(from 0deg, #fff 0 25%, #000 0 50%, #fff 0 75%, #000 0 100%);
+      box-shadow:0 0 0 2px rgba(255,255,255,.22) inset;
+    }
+    .pill{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    button, select, input[type="range"], input[type="text"]{font:inherit}
+    button{
+      background:var(--green);color:var(--navy);border:0;border-radius:12px;padding:9px 12px;
+      font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.25);
+    }
+    button.secondary{background:#18264a;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:none}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    select, input[type="text"]{
+      background:#0e1833;color:#fff;border:1px solid rgba(255,255,255,.18);
+      padding:8px 10px;border-radius:12px;
+    }
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    #wrap{display:flex;gap:12px;align-items:flex-start;padding:12px}
+    #canvas{
+      border-radius:16px;background:linear-gradient(180deg, #0b1430, #070c18);
+      box-shadow:0 16px 40px rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.12);
+      touch-action:none;
+    }
+    #panel{
+      width:460px;max-width:460px;
+      background:linear-gradient(180deg, var(--panel), #0b1226);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;padding:12px;
+      box-shadow:0 16px 40px rgba(0,0,0,.25);
+    }
+    h3{margin:8px 0 8px 0}
+    .muted{color:var(--muted)}
+    #palette{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .piece{
+      width:142px;height:64px;border-radius:14px;
+      background:linear-gradient(180deg, #132445, #0c1430);
+      border:1px solid rgba(255,255,255,.14);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      cursor:grab;user-select:none;
+    }
+    .piece:active{cursor:grabbing}
+    .piece b{font-size:13px}
+    .piece small{font-size:11px;opacity:.85}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:10px}
+    #playersList div{padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.12)}
+    #playersList div:last-child{border-bottom:0}
+    #overlay{
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
+      align-items:center; justify-content:center; z-index:999;
+    }
+    #winnerCard{
+      width:min(560px, 92vw);
+      background:linear-gradient(180deg, #111c34, #0b1226);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 24px 80px rgba(0,0,0,.5);
+    }
+    #winnerCard h2{margin:0 0 8px 0}
+    .banner{
+      display:flex;align-items:center;gap:10px;
+      background:linear-gradient(90deg, var(--orange), var(--orange2));
+      color:#201002;
+      border-radius:14px;padding:10px 12px;font-weight:900;
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 16px 40px rgba(0,0,0,.25);
+    }
+    .kbd{padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14);font-family:ui-monospace,monospace}
+    .tiny{font-size:12px}
+  </style>
+</head>
+<body>
+  <div id="top">
+    <div class="brand"><div class="flag"></div> HotWheels Multiplayer Racer <span class="pill">Top‑down arcade v4</span></div>
+
+    <button id="createRoom">Create Room</button>
+    <span id="roomCode" class="pill mono">----</span>
+    <button class="secondary" id="copyLink">Copy Controller Link</button>
+    <span id="copyStatus" class="muted tiny"></span>
+
+    <span id="trackStatus" class="pill">TRACK: choose preset or design</span>
+
+    <div class="row">
+      <label class="tiny muted">Track</label>
+      <select id="presetSel">
+        <option value="p1">01 • Orange Oval</option>
+        <option value="p2">02 • Figure‑8 Smash</option>
+        <option value="p3">03 • Loop & Dash</option>
+        <option value="p4">04 • S‑Curves</option>
+        <option value="p5">05 • Big Box Speedway</option>
+        <option value="custom">Design your own</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label class="tiny muted">Laps to win</label>
+      <select id="lapsToWin">
+        <option>1</option><option selected>3</option><option>5</option><option>7</option>
+      </select>
+    </div>
+
+    <button class="secondary" id="toggleMode">Drive Mode</button>
+    <button class="secondary" id="resetCars">Reset Cars</button>
+    <button class="secondary" id="clear">Clear (custom)</button>
+  </div>
+
+  <div id="wrap">
+    <canvas id="canvas" width="1100" height="720"></canvas>
+
+    <div id="panel">
+      <div class="banner">🔥 Hot Wheels vibe: orange track + decals + finish banner</div>
+
+      <h3>Pieces (drag onto the grid)</h3>
+      <div class="muted tiny">Design mode only. Pieces snap to grid and only valid connectors are allowed.</div>
+      <div id="palette">
+        <div class="piece" draggable="true" data-type="straight"><b>Straight</b><small>2 connectors</small></div>
+        <div class="piece" draggable="true" data-type="curve"><b>Curve</b><small>2 connectors</small></div>
+        <div class="piece" draggable="true" data-type="finish"><b>Finish Line</b><small>required</small></div>
+        <div class="piece" draggable="true" data-type="loop"><b>Loop Segment</b><small>speed gate</small></div>
+      </div>
+
+      <div class="grid2" style="margin-top:12px">
+        <div class="box">
+          <b>Build controls</b>
+          <div class="tiny muted" style="margin-top:6px;line-height:1.35">
+            • Drag pieces onto the grid (custom track)<br>
+            • Click a piece: rotate +90° (repeats correctly)<br>
+            • Right‑click: delete piece<br>
+            • Drag a placed piece to move it<br>
+            <span class="muted">Tip:</span> Rotate before you drag into place.
+          </div>
+          <div class="tiny muted" style="margin-top:10px">
+            Controls: <span class="kbd">click</span> rotate • <span class="kbd">right‑click</span> delete • <span class="kbd">drag</span> move
+          </div>
+        </div>
+
+        <div class="box">
+          <b>Gyro steering tuning (phones)</b>
+          <div class="tiny muted" style="margin-top:6px;line-height:1.35">
+            Players can steer by leaning their phone. They can calibrate on their controller screen.<br>
+            This host view shows live laps and winner.
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:12px">Players</h3>
+      <div id="playersList" class="box"></div>
+
+      <div class="box" style="margin-top:10px">
+        <div class="tiny muted">Controller URL</div>
+        <div id="controllerUrl" class="mono tiny" style="word-break:break-all;margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div id="winnerCard">
+      <h2>🏁 WINNER!</h2>
+      <div id="winnerText" style="font-size:20px;font-weight:900"></div>
+      <div class="muted" style="margin-top:10px">Click “Reset Cars” to race again.</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="secondary" id="closeWinner">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ====== WebSocket host plumbing ======
+  const createRoomBtn = document.getElementById('createRoom');
+  const roomCodeEl = document.getElementById('roomCode');
+  const copyBtn = document.getElementById('copyLink');
+  const copyStatus = document.getElementById('copyStatus');
+  const controllerUrlEl = document.getElementById('controllerUrl');
+  const playersListEl = document.getElementById('playersList');
+  const presetSel = document.getElementById('presetSel');
+  const lapsToWinSel = document.getElementById('lapsToWin');
+  const toggleModeBtn = document.getElementById('toggleMode');
+  const resetCarsBtn = document.getElementById('resetCars');
+  const clearBtn = document.getElementById('clear');
+  const trackStatus = document.getElementById('trackStatus');
+
+  const overlay = document.getElementById('overlay');
+  const winnerText = document.getElementById('winnerText');
+  const closeWinner = document.getElementById('closeWinner');
+  closeWinner.onclick = () => overlay.style.display = 'none';
+
+  let ws = null;
+  let room = null;
+  let players = [];
+  const inputsByPlayer = {};
+  const cars = {};
+  let winnerId = null;
+
+  function wsUrl(){
+    const proto = (location.protocol === 'https:') ? 'wss:' : 'ws:';
+    return `${proto}//${location.host}/ws`;
+  }
+  function send(obj){ if (ws?.readyState === 1) ws.send(JSON.stringify(obj)); }
+  async function connect(){
+    if (ws && ws.readyState === 1) return;
+    ws = new WebSocket(wsUrl());
+    await new Promise((res, rej)=>{ ws.onopen=res; ws.onerror=rej; });
+    ws.onmessage = (ev)=>handle(JSON.parse(ev.data));
+  }
+  function controllerUrl(){
+    if (!room) return '';
+    const u = new URL(location.href);
+    u.pathname = '/controller.html';
+    u.searchParams.set('room', room);
+    return u.toString();
+  }
+
+  createRoomBtn.onclick = async () => { await connect(); send({ t:'create-room' }); };
+  copyBtn.onclick = async () => {
+    const url = controllerUrl(); if (!url) return;
+    try { await navigator.clipboard.writeText(url); copyStatus.textContent='Copied!'; setTimeout(()=>copyStatus.textContent='',1200); }
+    catch { copyStatus.textContent='Copy failed'; setTimeout(()=>copyStatus.textContent='',2000); }
+  };
+
+  toggleModeBtn.onclick = () => {
+    if (!room) return;
+    driveMode = !driveMode;
+    winnerId = null;
+    overlay.style.display='none';
+    if (driveMode){
+      loop = computeLoop();
+      if (!loop.ok){ driveMode=false; setTrackStatus(loop); return; }
+      resetRace(true);
+    }
+    send({ t:'mode', room, driveMode });
+  };
+  resetCarsBtn.onclick = () => { overlay.style.display='none'; resetRace(true); };
+  clearBtn.onclick = () => {
+    if (driveMode || presetSel.value!=='custom') return;
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) grid[y][x]=null;
+    loop = { ok:false, reason:'place a finish line' };
+    setTrackStatus(loop);
+    broadcastTrack();
+  };
+
+  function handle(msg){
+    if (!msg?.t) return;
+    if (msg.t === 'room-created'){
+      room = msg.room;
+      roomCodeEl.textContent = room;
+      controllerUrlEl.textContent = controllerUrl();
+      players = [];
+      renderPlayers();
+      return;
+    }
+    if (msg.t === 'state' && Array.isArray(msg.players)){
+      players = msg.players;
+      renderPlayers();
+      for (let i=0;i<players.length;i++){
+        const id = players[i].id;
+        if (!cars[id]) cars[id] = { s:0, speed:0, offset:(i-(players.length-1)/2)*18, laps:0 };
+      }
+      return;
+    }
+    if (msg.t === 'input'){
+      inputsByPlayer[msg.playerId] = msg.inputs || {};
+      return;
+    }
+    if (msg.t === 'announce' && msg.winner){
+      overlay.style.display='flex';
+      winnerText.textContent = msg.winner;
+    }
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function renderPlayers(){
+    if (!players.length){
+      playersListEl.innerHTML = `<div class="muted tiny">No players yet. Open the controller link on phones and join with the room code.</div>`;
+      return;
+    }
+    playersListEl.innerHTML = players.map(p => {
+      const laps = cars[p.id]?.laps ?? 0;
+      return `<div><b>${escapeHtml(p.name)}</b> <span class="muted tiny">• laps: ${laps}</span></div>`;
+    }).join('');
+  }
+
+  // ===== Track system (grid pieces) =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const W = 18, H = 11;
+  const pad = 26;
+  const cell = 58;
+  canvas.width = pad*2 + W*cell;
+  canvas.height = pad*2 + H*cell;
+
+  // Wide track (about 3 cars)
+  const TRACK_HALF_WIDTH = 56;
+  const CAR_R = 12;
+
+  const DX = [0,1,0,-1];
+  const DY = [-1,0,1,0];
+
+  const PIECES = {
+    straight: { con:[1,3] },
+    curve:    { con:[0,1] },
+    finish:   { con:[1,3], finish:true },
+    loop:     { con:[1,3], loop:true }
+  };
+  function rotateDir(d,r){ return (d+r)&3; }
+  function consOf(p){ return PIECES[p.type].con.map(d => rotateDir(d,p.r)); }
+
+  const grid = Array.from({length:H}, ()=> Array.from({length:W}, ()=> null));
+
+  // 5 Hot Wheels style presets
+  function r(a,b){ const out=[]; for(let i=a;i<=b;i++) out.push(i); return out; }
+  const PRESETS = {
+    p1: { name:"Orange Oval", cells: [
+      ...r(4,13).map(x=>({x,y:2,type:'straight',r:0})),
+      {x:13,y:2,type:'curve',r:1},
+      ...r(3,7).map(y=>({x:13,y,type:'straight',r:1})),
+      {x:13,y:7,type:'curve',r:2},
+      ...r(4,13).map(x=>({x,y:7,type:'straight',r:0})),
+      {x:4,y:7,type:'curve',r:3},
+      ...r(3,7).map(y=>({x:4,y,type:'straight',r:1})),
+      {x:4,y:2,type:'curve',r:0},
+      {x:8,y:2,type:'finish',r:0},
+    ]},
+    p2: { name:"Figure-8 Smash", cells: [
+      // left loop
+      {x:4,y:3,type:'curve',r:0},{x:5,y:3,type:'straight',r:0},{x:6,y:3,type:'curve',r:1},
+      {x:6,y:4,type:'straight',r:1},{x:6,y:5,type:'curve',r:2},
+      {x:5,y:5,type:'straight',r:0},{x:4,y:5,type:'curve',r:3},{x:4,y:4,type:'straight',r:1},
+      // right loop
+      {x:11,y:3,type:'curve',r:0},{x:12,y:3,type:'straight',r:0},{x:13,y:3,type:'curve',r:1},
+      {x:13,y:4,type:'straight',r:1},{x:13,y:5,type:'curve',r:2},
+      {x:12,y:5,type:'straight',r:0},{x:11,y:5,type:'curve',r:3},{x:11,y:4,type:'straight',r:1},
+      // crossover bridge
+      {x:7,y:4,type:'straight',r:0},{x:8,y:4,type:'straight',r:0},{x:9,y:4,type:'straight',r:0},{x:10,y:4,type:'straight',r:0},
+      {x:8,y:4,type:'finish',r:0},
+      {x:12,y:3,type:'loop',r:0},
+    ]},
+    p3: { name:"Loop & Dash", cells: [
+      // long straight with loop
+      {x:3,y:5,type:'curve',r:0},
+      ...r(4,14).map(x=>({x,y:5,type:'straight',r:0})),
+      {x:14,y:5,type:'curve',r:1},
+      ...r(2,5).map(y=>({x:14,y,type:'straight',r:1})),
+      {x:14,y:2,type:'curve',r:2},
+      ...r(3,14).map(x=>({x,y:2,type:'straight',r:0})),
+      {x:3,y:2,type:'curve',r:3},
+      ...r(2,5).map(y=>({x:3,y,type:'straight',r:1})),
+      {x:7,y:5,type:'finish',r:0},
+      {x:10,y:5,type:'loop',r:0},
+    ]},
+    p4: { name:"S-Curves", cells: [
+      {x:3,y:3,type:'curve',r:1},{x:4,y:3,type:'straight',r:0},{x:5,y:3,type:'curve',r:2},
+      {x:5,y:4,type:'straight',r:1},{x:5,y:5,type:'curve',r:3},
+      {x:4,y:5,type:'straight',r:0},{x:3,y:5,type:'curve',r:0},{x:3,y:4,type:'straight',r:1},
+      // second S
+      {x:6,y:3,type:'straight',r:0},{x:7,y:3,type:'curve',r:2},
+      {x:7,y:4,type:'straight',r:1},{x:7,y:5,type:'curve',r:3},
+      {x:6,y:5,type:'straight',r:0},{x:5,y:5,type:'curve',r:0},
+      // close loop to the right
+      ...r(8,13).map(x=>({x,y:4,type:'straight',r:0})),
+      {x:13,y:4,type:'curve',r:1},
+      {x:13,y:5,type:'straight',r:1},
+      {x:13,y:6,type:'curve',r:2},
+      ...r(8,13).map(x=>({x,y:6,type:'straight',r:0})),
+      {x:8,y:6,type:'curve',r:3},
+      {x:8,y:5,type:'straight',r:1},
+      {x:8,y:4,type:'curve',r:0},
+      {x:4,y:3,type:'finish',r:0},
+      {x:11,y:4,type:'loop',r:0},
+    ]},
+    p5: { name:"Big Box Speedway", cells: [
+      ...r(3,15).map(x=>({x,y:1,type:'straight',r:0})),
+      {x:15,y:1,type:'curve',r:1},
+      ...r(2,9).map(y=>({x:15,y,type:'straight',r:1})),
+      {x:15,y:9,type:'curve',r:2},
+      ...r(3,15).map(x=>({x,y:9,type:'straight',r:0})),
+      {x:3,y:9,type:'curve',r:3},
+      ...r(2,9).map(y=>({x:3,y,type:'straight',r:1})),
+      {x:3,y:1,type:'curve',r:0},
+      {x:8,y:1,type:'finish',r:0},
+      {x:11,y:1,type:'loop',r:0},
+      {x:13,y:9,type:'loop',r:0},
+    ]},
+  };
+
+  function applyPreset(key){
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) grid[y][x]=null;
+    if (key === 'custom'){
+      loop = { ok:false, reason:'place a finish line' };
+      setTrackStatus(loop);
+      broadcastTrack();
+      return;
+    }
+    const p = PRESETS[key];
+    for (const c of p.cells){
+      if (c.x>=0 && c.x<W && c.y>=0 && c.y<H) grid[c.y][c.x] = { type:c.type, r:c.r|0 };
+    }
+    loop = computeLoop();
+    setTrackStatus(loop);
+    broadcastTrack();
+  }
+
+  presetSel.addEventListener('change', ()=>{
+    if (driveMode) return;
+    applyPreset(presetSel.value);
+  });
+
+  function setTrackStatus(v){
+    if (v.ok){
+      trackStatus.textContent = "TRACK: valid loop ✅";
+      trackStatus.style.background = "rgba(107,191,89,.25)";
+      trackStatus.style.borderColor = "rgba(107,191,89,.55)";
+    } else {
+      trackStatus.textContent = "TRACK: " + (v.reason || "invalid");
+      trackStatus.style.background = "rgba(255,255,255,.10)";
+      trackStatus.style.borderColor = "rgba(255,255,255,.14)";
+    }
+  }
+
+  function inBounds(x,y){ return x>=0 && y>=0 && x<W && y<H; }
+  function neighbor(x,y,dir){
+    const nx=x+DX[dir], ny=y+DY[dir];
+    if (!inBounds(nx,ny)) return null;
+    return {x:nx,y:ny,p:grid[ny][nx]};
+  }
+  function canPlaceAt(x,y,type,r){
+    if (!inBounds(x,y)) return false;
+    if (grid[y][x]) return false;
+    const p = {type,r};
+    const our = consOf(p);
+    for (let dir=0; dir<4; dir++){
+      const nb = neighbor(x,y,dir);
+      if (!nb || !nb.p) continue;
+      const theirs = consOf(nb.p).includes((dir+2)&3);
+      const ours = our.includes(dir);
+      if (theirs !== ours) return false;
+    }
+    return true;
+  }
+
+  function findFinish(){
+    let fin=null;
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      const p = grid[y][x];
+      if (p && PIECES[p.type].finish){
+        if (fin) return {ok:false, reason:'multiple finish lines'};
+        fin = {x,y};
+      }
+    }
+    if (!fin) return {ok:false, reason:'place a finish line'};
+    return {ok:true, fin};
+  }
+
+  function computeLoop(){
+    const f = findFinish();
+    if (!f.ok) return {ok:false, reason:f.reason};
+    const fin = f.fin;
+
+    // Validate connectors
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      const p = grid[y][x]; if (!p) continue;
+      for (const dir of consOf(p)){
+        const nb = neighbor(x,y,dir);
+        if (!nb || !nb.p) return {ok:false, reason:'open/broken connector'};
+        if (!consOf(nb.p).includes((dir+2)&3)) return {ok:false, reason:'mismatched connector'};
+      }
+    }
+
+    const points=[];
+    const visited = new Set();
+    let cx=fin.x, cy=fin.y;
+    const fp = grid[cy][cx];
+    const fcons = consOf(fp);
+    let dir = fcons[0];
+    let enter = (dir+2)&3;
+    let safety=0;
+
+    function segLen(kind){
+      if (kind==='curve') return Math.PI*(cell/2);
+      return cell;
+    }
+
+    while (safety++ < 2500){
+      const p = grid[cy][cx];
+      const kind = p.type;
+      const cons = consOf(p);
+      const exit = (cons[0] === enter) ? cons[1] : cons[0];
+
+      points.push({x:cx,y:cy,enter,exit,kind,segLen:segLen(kind)});
+      visited.add(cx+','+cy);
+
+      const nx=cx+DX[exit], ny=cy+DY[exit];
+      if (!inBounds(nx,ny) || !grid[ny][nx]) return {ok:false, reason:'dead end'};
+      cx=nx; cy=ny; enter=(exit+2)&3;
+
+      if (cx===fin.x && cy===fin.y){
+        if (!consOf(grid[cy][cx]).includes(enter)) return {ok:false, reason:'finish not connected'};
+        break;
+      }
+    }
+    if (safety>=2500) return {ok:false, reason:'loop too long'};
+
+    // No extra disconnected pieces allowed
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      if (grid[y][x] && !visited.has(x+','+y)) return {ok:false, reason:'extra pieces not in loop'};
+    }
+
+    const totalLen = points.reduce((a,b)=>a+b.segLen,0);
+    return { ok:true, fin, points, totalLen };
+  }
+
+  // ===== Design mode: drag from palette + drag placed pieces =====
+  let paletteDragType = null;
+  for (const el of document.querySelectorAll('.piece')){
+    el.addEventListener('dragstart', (e)=>{
+      if (driveMode || presetSel.value!=='custom') { e.preventDefault(); return; }
+      paletteDragType = el.dataset.type;
+      e.dataTransfer.setData('text/plain', paletteDragType);
+    });
+  }
+  canvas.addEventListener('dragover', (e)=>{ if (!driveMode && presetSel.value==='custom') e.preventDefault(); });
+  canvas.addEventListener('drop', (e)=>{
+    if (driveMode || presetSel.value!=='custom') return;
+    e.preventDefault();
+    const type = e.dataTransfer.getData('text/plain') || paletteDragType;
+    if (!type) return;
+    const {gx,gy} = mouseToGrid(e.offsetX, e.offsetY);
+    // default orientation: try r=0..3 find one that is valid against neighbors (best UX)
+    let placed = false;
+    for (let rr=0; rr<4; rr++){
+      if (canPlaceAt(gx,gy,type,rr)){
+        grid[gy][gx] = {type, r:rr};
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) flashCell(gx,gy);
+    loop = computeLoop();
+    setTrackStatus(loop);
+    broadcastTrack();
+  });
+
+  // drag existing piece to move it (keeps orientation)
+  let dragMove = null;
+  canvas.addEventListener('pointerdown', (e)=>{
+    if (driveMode || presetSel.value!=='custom') return;
+    const {gx,gy} = mouseToGrid(e.offsetX, e.offsetY);
+    if (!inBounds(gx,gy)) return;
+    if (e.button === 2){ // right click delete
+      if (grid[gy][gx]){
+        grid[gy][gx]=null;
+        loop=computeLoop(); setTrackStatus(loop); broadcastTrack();
+      }
+      return;
+    }
+    const p = grid[gy][gx];
+    if (!p) return;
+    dragMove = { fromX:gx, fromY:gy, piece:p };
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e)=>{
+    if (!dragMove) return;
+    dragMove.mx = e.offsetX;
+    dragMove.my = e.offsetY;
+  });
+  canvas.addEventListener('pointerup', (e)=>{
+    if (!dragMove) return;
+    const {gx,gy} = mouseToGrid(e.offsetX, e.offsetY);
+    const {fromX,fromY,piece} = dragMove;
+    dragMove = null;
+
+    if (!inBounds(gx,gy)) return;
+    if (gx===fromX && gy===fromY) return;
+
+    // remove then attempt place
+    grid[fromY][fromX] = null;
+    const ok = canPlaceAt(gx,gy,piece.type,piece.r);
+    if (ok){
+      grid[gy][gx] = piece;
+    } else {
+      // restore
+      grid[fromY][fromX] = piece;
+      flashCell(gx,gy);
+    }
+    loop = computeLoop();
+    setTrackStatus(loop);
+    broadcastTrack();
+  });
+
+  // click rotate (+90) — repeats correctly
+  canvas.addEventListener('click', (e)=>{
+    if (driveMode || presetSel.value!=='custom') return;
+    const {gx,gy} = mouseToGrid(e.offsetX, e.offsetY);
+    if (!inBounds(gx,gy)) return;
+    const p = grid[gy][gx]; if (!p) return;
+    const nextR = (p.r + 1) & 3;
+    grid[gy][gx] = null;
+    if (canPlaceAt(gx,gy,p.type,nextR)){
+      grid[gy][gx] = {type:p.type, r:nextR};
+    } else {
+      grid[gy][gx] = p;
+      flashCell(gx,gy);
+    }
+    loop = computeLoop(); setTrackStatus(loop); broadcastTrack();
+  });
+
+  canvas.addEventListener('contextmenu', (e)=>e.preventDefault());
+
+  function mouseToGrid(mx,my){ return {gx:Math.floor((mx-pad)/cell), gy:Math.floor((my-pad)/cell)}; }
+
+  let flash=null;
+  function flashCell(gx,gy){ flash={gx,gy,t:14}; }
+
+  function broadcastTrack(){
+    if (!room) return;
+    const cells=[];
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      const p=grid[y][x];
+      if (p) cells.push({x,y,type:p.type,r:p.r});
+    }
+    send({ t:'track', room, w:W, h:H, cell, cells });
+  }
+
+  // ===== Rendering (Hot Wheels look) =====
+  function cellRect(x,y){
+    const x0=pad+x*cell, y0=pad+y*cell;
+    return {x0,y0,x1:x0+cell,y1:y0+cell,cx:x0+cell/2,cy:y0+cell/2};
+  }
+  function edgeMid(x,y,dir){
+    const r=cellRect(x,y);
+    if (dir===0) return {x:r.cx,y:r.y0};
+    if (dir===1) return {x:r.x1,y:r.cy};
+    if (dir===2) return {x:r.cx,y:r.y1};
+    return {x:r.x0,y:r.cy};
+  }
+  function arcCorner(x,y,a,b){
+    const r=cellRect(x,y);
+    const s=new Set([a,b]);
+    if (s.has(0)&&s.has(1)) return {x:r.x1,y:r.y0};
+    if (s.has(1)&&s.has(2)) return {x:r.x1,y:r.y1};
+    if (s.has(2)&&s.has(3)) return {x:r.x0,y:r.y1};
+    return {x:r.x0,y:r.y0};
+  }
+
+  function drawBackdrop(){
+    // subtle stars + vignette
+    ctx.save();
+    ctx.fillStyle = "#071021";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.globalAlpha = 0.22;
+    for (let i=0;i<90;i++){
+      const x = (i*97 % 997)/997 * canvas.width;
+      const y = (i*193 % 983)/983 * canvas.height;
+      ctx.fillStyle = (i%4===0) ? "#ffffff" : "#9bb7ff";
+      ctx.fillRect(x,y, (i%3)+1, (i%3)+1);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawGridLines(){
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = "#22345c";
+    for (let x=0;x<=W;x++){
+      const px = pad + x*cell;
+      ctx.beginPath(); ctx.moveTo(px,pad); ctx.lineTo(px,pad+H*cell); ctx.stroke();
+    }
+    for (let y=0;y<=H;y++){
+      const py = pad + y*cell;
+      ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(pad+W*cell,py); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawTrackStroke(pathFn, isFinish=false, isLoop=false){
+    // Outer black edge
+    ctx.save();
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.strokeStyle = "rgba(0,0,0,.60)";
+    ctx.lineWidth = TRACK_HALF_WIDTH*2 + 14;
+    ctx.beginPath(); pathFn(); ctx.stroke();
+
+    // Orange main
+    ctx.strokeStyle = isFinish ? "#ffffff" : (isLoop ? "#ffd54d" : "#ff6a00");
+    ctx.lineWidth = TRACK_HALF_WIDTH*2;
+    ctx.beginPath(); pathFn(); ctx.stroke();
+
+    // Decal stripe (black/white) down center
+    ctx.globalAlpha = 0.92;
+    ctx.strokeStyle = "rgba(0,0,0,.55)";
+    ctx.lineWidth = 6;
+    ctx.setLineDash([10,10]);
+    ctx.beginPath(); pathFn(); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Highlight
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 4;
+    ctx.beginPath(); pathFn(); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPiece(x,y,p){
+    const cons = consOf(p);
+    const isFinish = !!PIECES[p.type].finish;
+    const isLoop = !!PIECES[p.type].loop;
+
+    const pathFn = () => {
+      if (p.type === 'curve'){
+        const a=edgeMid(x,y,cons[0]);
+        const b=edgeMid(x,y,cons[1]);
+        const corner=arcCorner(x,y,cons[0],cons[1]);
+        const rad=cell/2;
+        const ang0=Math.atan2(a.y-corner.y,a.x-corner.x);
+        const ang1=Math.atan2(b.y-corner.y,b.x-corner.x);
+        let delta=ang1-ang0;
+        while(delta>Math.PI) delta-=2*Math.PI;
+        while(delta<-Math.PI) delta+=2*Math.PI;
+        const angEnd = ang0 + delta;
+        ctx.arc(corner.x,corner.y,rad,ang0,angEnd,delta<0);
+      } else {
+        const a=edgeMid(x,y,cons[0]);
+        const b=edgeMid(x,y,cons[1]);
+        ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      }
+    };
+
+    drawTrackStroke(pathFn, isFinish, isLoop);
+
+    // Finish banner
+    if (isFinish){
+      const r = cellRect(x,y);
+      const a = edgeMid(x,y,cons[0]);
+      const b = edgeMid(x,y,cons[1]);
+      const mid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+      const ang = Math.atan2(b.y-a.y, b.x-a.x);
+      ctx.save();
+      ctx.translate(mid.x, mid.y);
+      ctx.rotate(ang);
+      ctx.fillStyle = "rgba(0,0,0,.55)";
+      ctx.fillRect(-42, -TRACK_HALF_WIDTH-20, 84, 18);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 12px system-ui, Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("FINISH", 0, -TRACK_HALF_WIDTH-7);
+      ctx.restore();
+    }
+  }
+
+  // Track sampling for car movement
+  function pointOn(seg, t){
+    if (seg.kind === 'curve'){
+      const a = edgeMid(seg.x,seg.y,seg.enter);
+      const b = edgeMid(seg.x,seg.y,seg.exit);
+      const corner = arcCorner(seg.x,seg.y,seg.enter,seg.exit);
+      const rad = cell/2;
+      const ang0=Math.atan2(a.y-corner.y,a.x-corner.x);
+      const ang1=Math.atan2(b.y-corner.y,b.x-corner.x);
+      let delta=ang1-ang0;
+      while(delta>Math.PI) delta-=2*Math.PI;
+      while(delta<-Math.PI) delta+=2*Math.PI;
+      const ang = ang0 + delta*t;
+      return {x:corner.x+Math.cos(ang)*rad, y:corner.y+Math.sin(ang)*rad};
+    }
+    const a = edgeMid(seg.x,seg.y,seg.enter);
+    const b = edgeMid(seg.x,seg.y,seg.exit);
+    return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t};
+  }
+  function sampleAt(s){
+    const total = loop.totalLen;
+    let rem = ((s%total)+total)%total;
+    for (let i=0;i<loop.points.length;i++){
+      const seg = loop.points[i];
+      if (rem <= seg.segLen){
+        const t = rem/seg.segLen;
+        const pos = pointOn(seg, t);
+        const eps = 10;
+        const pos2 = pointOn(seg, Math.min(1, (rem+eps)/seg.segLen));
+        const vx = pos2.x - pos.x, vy = pos2.y - pos.y;
+        const mag = Math.hypot(vx,vy)||1;
+        const tx = vx/mag, ty = vy/mag;
+        const nx = -ty, ny = tx;
+        return {x:pos.x,y:pos.y, tx,ty,nx,ny, kind:seg.kind};
+      }
+      rem -= seg.segLen;
+    }
+    const last = loop.points[loop.points.length-1];
+    const c = cellRect(last.x,last.y);
+    return {x:c.cx,y:c.cy, tx:1,ty:0,nx:0,ny:1, kind:last.kind};
+  }
+
+  // ===== Race sim: wide-track physics, collisions, laps, winner =====
+  let driveMode = false;
+  let loop = { ok:false, reason:'loading...' };
+
+  function resetRace(broadcast=false){
+    winnerId = null;
+    overlay.style.display='none';
+    for (let i=0;i<players.length;i++){
+      const id = players[i].id;
+      cars[id] = { s:0, speed:0, offset:(i-(players.length-1)/2)*20, laps:0 };
+      if (broadcast && room) send({ t:'race', room, playerId:id, laps:0 });
+    }
+    renderPlayers();
+  }
+
+  function resolveCollisions(){
+    const ids = players.map(p=>p.id).filter(id=>cars[id]);
+    for (let i=0;i<ids.length;i++){
+      for (let j=i+1;j<ids.length;j++){
+        const a=cars[ids[i]], b=cars[ids[j]];
+        const sa=sampleAt(a.s), sb=sampleAt(b.s);
+        const ax=sa.x + sa.nx*a.offset, ay=sa.y + sa.ny*a.offset;
+        const bx=sb.x + sb.nx*b.offset, by=sb.y + sb.ny*b.offset;
+        const dx=bx-ax, dy=by-ay;
+        const dist=Math.hypot(dx,dy)||1;
+        const minDist = CAR_R*2;
+        if (dist < minDist){
+          const nx=dx/dist;
+          const overlap = (minDist - dist);
+          a.offset -= nx*overlap*0.55;
+          b.offset += nx*overlap*0.55;
+          a.speed *= 0.84;
+          b.speed *= 0.84;
+        }
+      }
+    }
+  }
+  function clampOffsets(){
+    const lim = TRACK_HALF_WIDTH - CAR_R;
+    for (const p of players){
+      const c=cars[p.id]; if (!c) continue;
+      c.offset = Math.max(-lim, Math.min(lim, c.offset));
+    }
+  }
+
+  function stepRace(dt){
+    if (!driveMode || !loop.ok) return;
+    const total = loop.totalLen;
+    const lapsToWin = parseInt(lapsToWinSel.value,10)||3;
+
+    for (let i=0;i<players.length;i++){
+      const pl = players[i];
+      const id = pl.id;
+      const inp = inputsByPlayer[id] || {};
+      const c = cars[id] || (cars[id]={s:0,speed:0,offset:0,laps:0});
+
+      // steer: either float (gyro) or buttons
+      const steer = (typeof inp.steer === 'number')
+        ? inp.steer
+        : ((inp.left? -1:0) + (inp.right? 1:0));
+
+      const accel = inp.up ? 260 : 0;
+      const brake = inp.down ? 400 : 0;
+
+      c.speed += (accel - brake) * dt;
+      // rolling friction
+      c.speed -= c.speed * 0.92 * dt;
+      c.speed = Math.max(0, Math.min(640, c.speed));
+
+      // loop segment behavior: need speed threshold, else you "stall"
+      const seg = sampleAt(c.s);
+      if (seg.kind === 'loop' && c.speed < 240){
+        c.speed *= (1 - 0.95*dt);
+      } else if (seg.kind === 'loop' && c.speed > 320){
+        c.speed += 35*dt;
+      }
+
+      c.offset += steer * 180 * dt;
+
+      const prev = c.s % total;
+      c.s += c.speed * dt;
+      const cur = c.s % total;
+
+      if (cur < prev){
+        c.laps += 1;
+        if (room) send({ t:'race', room, playerId:id, laps:c.laps });
+        if (!winnerId && c.laps >= lapsToWin){
+          winnerId = id;
+          const winnerName = pl.name;
+          overlay.style.display='flex';
+          winnerText.textContent = winnerName;
+          send({ t:'announce', room, winner: winnerName });
+        }
+      }
+    }
+
+    resolveCollisions();
+    clampOffsets();
+    renderPlayers();
+  }
+
+  function drawCars(){
+    for (let i=0;i<players.length;i++){
+      const pl=players[i];
+      const c=cars[pl.id]; if (!c) continue;
+      const s=sampleAt(c.s);
+      const x=s.x + s.nx*c.offset;
+      const y=s.y + s.ny*c.offset;
+      const ang = Math.atan2(s.ty, s.tx);
+
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(ang);
+
+      // car body
+      ctx.fillStyle = "#6BBF59";
+      ctx.fillRect(-14,-8,28,16);
+      // windshield
+      ctx.fillStyle = "#0A2342";
+      ctx.fillRect(-5,-7,14,14);
+      // spoiler highlight
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(-14,-8,28,3);
+      ctx.restore();
+
+      // label
+      ctx.save();
+      ctx.fillStyle="#fff";
+      ctx.globalAlpha=0.92;
+      ctx.font="12px system-ui, Arial";
+      ctx.fillText(pl.name+" ("+(c.laps||0)+")", x+14, y-12);
+      ctx.restore();
+    }
+  }
+
+  function drawGhost(){
+    if (!dragMove) return;
+    const {piece, mx, my} = dragMove;
+    if (mx==null || my==null) return;
+    const {gx,gy} = mouseToGrid(mx,my);
+    if (!inBounds(gx,gy)) return;
+    const r=cellRect(gx,gy);
+    ctx.save();
+    ctx.globalAlpha=0.35;
+    ctx.fillStyle="#ffffff";
+    ctx.fillRect(r.x0+2,r.y0+2,cell-4,cell-4);
+    ctx.restore();
+    // draw piece on top faint
+    drawPiece(gx,gy,piece);
+  }
+
+  function render(){
+    drawBackdrop();
+
+    // subtle border
+    ctx.save();
+    ctx.strokeStyle="rgba(255,255,255,.10)";
+    ctx.lineWidth=2;
+    ctx.strokeRect(10,10,canvas.width-20,canvas.height-20);
+    ctx.restore();
+
+    drawGridLines();
+
+    // Track pieces
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      const p=grid[y][x]; if (p) drawPiece(x,y,p);
+    }
+
+    // flash invalid cell
+    if (flash){
+      const rr=cellRect(flash.gx,flash.gy);
+      ctx.save(); ctx.globalAlpha=Math.max(0,flash.t/14)*0.24;
+      ctx.fillStyle="#ff4d4d";
+      ctx.fillRect(rr.x0,rr.y0,cell,cell);
+      ctx.restore();
+      flash.t--; if (flash.t<=0) flash=null;
+    }
+
+    drawGhost();
+
+    if (driveMode && loop.ok){
+      drawCars();
+      // HUD banner
+      ctx.save();
+      ctx.fillStyle="rgba(0,0,0,.35)";
+      ctx.fillRect(20,20,360,44);
+      ctx.fillStyle="#ffffff";
+      ctx.font="900 18px system-ui, Arial";
+      ctx.fillText("DRIVE MODE", 34, 48);
+      ctx.font="12px system-ui, Arial";
+      ctx.fillText(`Laps to win: ${parseInt(lapsToWinSel.value,10)||3}`, 150, 48);
+      ctx.restore();
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  let last = performance.now();
+  function tick(now){
+    const dt = Math.min(0.05, (now-last)/1000);
+    last = now;
+    if (driveMode){
+      loop = computeLoop();
+      setTrackStatus(loop);
+      if (loop.ok) stepRace(dt);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // Boot
+  presetSel.value = 'p1';
+  applyPreset('p1');
+  loop = computeLoop();
+  setTrackStatus(loop);
+  requestAnimationFrame(render);
+  requestAnimationFrame(tick);
+
+})();
+</script>
 </body>
 </html>
