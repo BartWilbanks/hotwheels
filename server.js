@@ -52,8 +52,11 @@ wss.on("connection", (ws) => {
     if (type === "create_room") {
       let code = makeRoomCode();
       while (rooms.has(code)) code = makeRoomCode();
-      const room = getRoom(code);
-      broadcast(room, { type:"room_created", room: code });
+      // IMPORTANT: when the host requests a room, the room doesn't yet have a
+      // host attached (host_join happens next). So we must reply directly to
+      // this websocket, otherwise nobody receives the message.
+      getRoom(code);
+      ws.send(JSON.stringify({ type: "room_created", room: code }));
       return;
     }
 
