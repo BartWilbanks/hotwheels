@@ -1,123 +1,221 @@
-import express from "express";
-import http from "http";
-import { WebSocketServer } from "ws";
-import crypto from "crypto";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const path = require("path");
+const express = require("express");
+const http = require("http");
+const WebSocket = require("ws");
 
 const app = express();
-app.use((req, res, next) => { res.setHeader("Cache-Control", "no-store, max-age=0"); next(); });
-app.use(express.static(path.join(__dirname, "public")));
-app.get("/health", (_, res) => res.status(200).send("ok"));
-app.get("/", (_, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.get("/controller", (_, res) => res.redirect(302, "/controller.html"));
+app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
+
+app.get("/healthz", (req,res)=>res.status(200).send("ok"));
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws" });
+const wss = new WebSocket.Server({ server });
 
-// Rooms are in-memory. Restarting the service clears them.
-const rooms = new Map(); // code -> { hostWs, players: Map(id -> {ws,name}) }
+const rooms = new Map();
 
-function makeRoomCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 4; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
+function makeCode() {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i=0;i<4;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
 }
-function makeId() { return crypto.randomBytes(8).toString("hex"); }
-function send(ws, obj) { if (ws?.readyState === 1) ws.send(JSON.stringify(obj)); }
-function broadcast(roomCode, obj) {
-  const room = rooms.get(roomCode);
-  if (!room) return;
-  if (room.hostWs) send(room.hostWs, obj);
-  for (const p of room.players.values()) send(p.ws, obj);
+
+function safeSend(ws, obj){
+  if (ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify(obj));
 }
-function playersList(roomCode) {
-  const room = rooms.get(roomCode);
-  if (!room) return [];
-  return Array.from(room.players.entries()).map(([id, p]) => ({ id, name: p.name }));
+
+function broadcast(room, obj){
+  for (const ws of room.sockets){
+    safeSend(ws, obj);
+  }
+}
+
+function createRoom(){
+  let code;
+  do { code = makeCode(); } while (rooms.has(code));
+  const room = {
+    code,
+    hostId: null,
+    sockets: new Set(),
+    players: new Map(),
+    mode: "build",
+    track: { presetId: "01", customPieces: [], width: 140, lapsToWin: 3 },
+    winner: null,
+    createdAt: Date.now()
+  };
+  rooms.set(code, room);
+  return room;
+}
+
+function roomSnapshot(room){
+  return {
+    code: room.code,
+    mode: room.mode,
+    track: room.track,
+    players: Array.from(room.players.values()).map(p=>({
+      id:p.id, name:p.name, color:p.color, lap:p.lap||0, finished: !!p.finished
+    })),
+    winner: room.winner
+  };
+}
+
+let nextClientId = 1;
+function newClientId(){ return String(nextClientId++); }
+
+function randomColor(){
+  const colors = ["#ff3b30","#34c759","#0a84ff","#ff9f0a","#bf5af2","#64d2ff","#ffd60a","#ff375f"];
+  return colors[Math.floor(Math.random()*colors.length)];
 }
 
 wss.on("connection", (ws) => {
-  ws._role = "unknown";
-  ws._room = null;
-  ws._playerId = null;
+  ws.id = newClientId();
+  ws.role = "unknown";
+  ws.roomCode = null;
+  ws.playerId = null;
+
+  safeSend(ws, { type:"hello", id: ws.id });
 
   ws.on("message", (buf) => {
     let msg;
-    try { msg = JSON.parse(buf.toString("utf-8")); } catch { return; }
-    if (!msg?.t) return;
+    try { msg = JSON.parse(buf.toString()); } catch { return; }
 
-    if (msg.t === "create-room") {
-      let code = makeRoomCode();
-      while (rooms.has(code)) code = makeRoomCode();
-      rooms.set(code, { hostWs: ws, players: new Map() });
-      ws._role = "host";
-      ws._room = code;
-      send(ws, { t: "room-created", room: code, players: [] });
+    if (msg.type === "create_room") {
+      const room = createRoom();
+      ws.role = "host";
+      ws.roomCode = room.code;
+      room.hostId = ws.id;
+      room.sockets.add(ws);
+      safeSend(ws, { type:"room_created", room: roomSnapshot(room) });
       return;
     }
 
-    if (msg.t === "join" && msg.room) {
-      const code = String(msg.room).toUpperCase();
+    if (msg.type === "join_room") {
+      const code = (msg.code||"").toUpperCase().trim();
       const room = rooms.get(code);
-      if (!room || !room.hostWs) { send(ws, { t:"error", message:"Room not found. Host must click Create Room." }); return; }
+      if (!room){
+        safeSend(ws, { type:"error", message:"Room not found" });
+        return;
+      }
+      ws.roomCode = code;
+      ws.role = "player";
+      room.sockets.add(ws);
 
-      const playerId = makeId();
-      const name = String(msg.name || "Player").slice(0, 16);
-      room.players.set(playerId, { ws, name });
+      const name = String(msg.name||"Player").slice(0,18).trim() || "Player";
+      const playerId = "p_" + ws.id;
+      ws.playerId = playerId;
 
-      ws._role = "player";
-      ws._room = code;
-      ws._playerId = playerId;
+      room.players.set(playerId, {
+        id: playerId,
+        name,
+        color: randomColor(),
+        inputs: { gas:false, brake:false, left:false, right:false, tilt:0 },
+        lap: 0,
+        finished: false
+      });
 
-      send(ws, { t:"joined", room: code, playerId });
-      send(room.hostWs, { t:"player-joined", room: code, playerId, name });
-      broadcast(code, { t:"state", room: code, players: playersList(code) });
+      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+      safeSend(ws, { type:"joined", room: roomSnapshot(room), playerId });
       return;
     }
 
-    if (msg.t === "input" && msg.room && msg.playerId && msg.inputs) {
-      const code = String(msg.room).toUpperCase();
-      const room = rooms.get(code);
-      if (!room?.hostWs) return;
-      // Only accept inputs from the player who owns that playerId on this ws
-      if (ws._role !== "player" || ws._playerId !== msg.playerId) return;
-      send(room.hostWs, { t:"input", room: code, playerId: msg.playerId, inputs: msg.inputs });
+    const room = ws.roomCode ? rooms.get(ws.roomCode) : null;
+    if (!room) return;
+
+    if (msg.type === "set_track") {
+      if (ws.role !== "host") return;
+      const t = msg.track || {};
+      room.track = {
+        presetId: String(t.presetId || room.track.presetId),
+        customPieces: Array.isArray(t.customPieces) ? t.customPieces.slice(0,600) : [],
+        width: Number(t.width || room.track.width || 140),
+        lapsToWin: Math.max(1, Math.min(9, Number(t.lapsToWin || room.track.lapsToWin || 3)))
+      };
+      room.mode = "build";
+      room.winner = null;
+      for (const p of room.players.values()){ p.lap=0; p.finished=false; }
+      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
       return;
     }
 
-    // Host broadcast messages
-    if ((msg.t === "mode" || msg.t === "track" || msg.t === "race" || msg.t === "preset" || msg.t === "announce") && msg.room) {
-      const code = String(msg.room).toUpperCase();
-      const room = rooms.get(code);
-      if (!room || room.hostWs !== ws) return;
-      broadcast(code, msg);
+    if (msg.type === "set_mode") {
+      if (ws.role !== "host") return;
+      const m = msg.mode;
+      if (!["build","drive","winner"].includes(m)) return;
+      room.mode = m;
+      if (m !== "winner") room.winner = null;
+      if (m === "build"){
+        for (const p of room.players.values()){ p.lap=0; p.finished=false; }
+      }
+      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+      return;
+    }
+
+    if (msg.type === "reset_cars") {
+      if (ws.role !== "host") return;
+      broadcast(room, { type:"reset_cars" });
+      return;
+    }
+
+    if (msg.type === "clear_custom") {
+      if (ws.role !== "host") return;
+      room.track.customPieces = [];
+      room.track.presetId = String(msg.presetId || room.track.presetId || "01");
+      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+      return;
+    }
+
+    if (msg.type === "input") {
+      if (ws.role !== "player") return;
+      const p = room.players.get(ws.playerId);
+      if (!p) return;
+      const upd = msg.input || {};
+      const i = p.inputs;
+      if (typeof upd.gas === "boolean") i.gas = upd.gas;
+      if (typeof upd.brake === "boolean") i.brake = upd.brake;
+      if (typeof upd.left === "boolean") i.left = upd.left;
+      if (typeof upd.right === "boolean") i.right = upd.right;
+      if (typeof upd.tilt === "number") i.tilt = Math.max(-1, Math.min(1, upd.tilt));
+      // Broadcast to all so host receives it even if it reconnects
+      broadcast(room, { type:"player_input", playerId: p.id, input: i });
+      return;
+    }
+
+    if (msg.type === "lap_update") {
+      if (ws.role !== "host") return;
+      const { playerId, lap, finished } = msg;
+      const p = room.players.get(playerId);
+      if (!p) return;
+      if (typeof lap === "number") p.lap = lap;
+      if (typeof finished === "boolean") p.finished = finished;
+      if (finished && !room.winner){
+        room.winner = { playerId: p.id, name: p.name, color: p.color };
+        room.mode = "winner";
+      }
+      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
       return;
     }
   });
 
   ws.on("close", () => {
-    const code = ws._room;
-    if (!code) return;
-    const room = rooms.get(code);
-    if (!room) return;
-
-    if (ws._role === "host") {
-      for (const p of room.players.values()) { try { p.ws.close(); } catch {} }
-      rooms.delete(code);
-      return;
-    }
-    if (ws._role === "player" && ws._playerId) {
-      room.players.delete(ws._playerId);
-      if (room.hostWs) send(room.hostWs, { t:"player-left", room: code, playerId: ws._playerId });
-      broadcast(code, { t:"state", room: code, players: playersList(code) });
+    const room = ws.roomCode ? rooms.get(ws.roomCode) : null;
+    if (room){
+      room.sockets.delete(ws);
+      if (ws.role === "player" && ws.playerId){
+        room.players.delete(ws.playerId);
+      }
+      if (ws.role === "host"){
+        room.hostId = null;
+        room.mode = "build";
+        room.winner = null;
+      }
+      broadcast(room, { type:"room_update", room: roomSnapshot(room) });
+      if (room.sockets.size === 0){
+        rooms.delete(room.code);
+      }
     }
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+server.listen(PORT, () => console.log("Server listening on port", PORT));

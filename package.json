@@ -1,8 +1,9 @@
 {
   "name": "hotwheels-multiplayer-racer",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
-  "type": "module",
+  "description": "Hot Wheels\u2013style top-down arcade multiplayer racer (host + phone controllers) with track builder and presets.",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },

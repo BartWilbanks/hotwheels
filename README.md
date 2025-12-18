@@ -1,19 +1,18 @@
-# HotWheels Multiplayer Racer (Top-down arcade) v4
+# HotWheels Multiplayer Racer (Top-down arcade v4.1)
+
+This project hosts a **host screen** (laptop/TV) and **phone controllers** (players join via mobile).
 
 ## Run locally
-1) Install Node.js
-2) In this folder:
-   npm install
-   npm start
-3) Open:
-   Host:       http://localhost:3000/
-   Controller: http://localhost:3000/controller.html
+```bash
+npm install
+npm start
+```
 
-## Deploy to Render (Web Service)
-- Build Command: npm install
-- Start Command: npm start
-- Root Directory: (blank)
+Then open:
+- Host: http://localhost:3000/
+- Controller: http://localhost:3000/controller.html
 
-## Notes
-- Rooms are in-memory. If Render restarts, room codes reset.
-- Host creates a room; phones join using the room code.
+## Deploy on Render
+- Build command: `npm install`
+- Start command: `npm start`
+- Root directory: (blank)
