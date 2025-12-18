@@ -1,94 +1,132 @@
 (() => {
-  const $ = (id)=>document.getElementById(id);
-  const roomInput = $("room");
-  const nameInput = $("name");
-  const joinBtn = $("join");
-  const statusEl = $("joinStatus");
-  const connEl = $("conn");
+  const qs = new URLSearchParams(location.search);
+  const codeFromUrl = (qs.get("room") || "").toUpperCase();
 
-  const gasBtn = $("gas");
-  const brakeBtn = $("brake");
-  const leftBtn = $("left");
-  const rightBtn = $("right");
-  const calBtn = $("cal");
-  const tiltReadout = $("tiltReadout");
-
-  const state = {
-    ws:null,
-    joined:false,
-    input:{gas:false,brake:false,left:false,right:false,tilt:0},
-    tilt0:null,
-    tiltScale:1.2
+  const el = {
+    name: document.getElementById("name"),
+    code: document.getElementById("code"),
+    join: document.getElementById("join"),
+    status: document.getElementById("status"),
+    gas: document.getElementById("gas"),
+    brake: document.getElementById("brake"),
+    left: document.getElementById("left"),
+    right: document.getElementById("right"),
+    steerVal: document.getElementById("steerVal"),
+    enableTilt: document.getElementById("enableTilt"),
+    calibrate: document.getElementById("calibrate"),
   };
 
-  function wsUrl(){
-    const proto = location.protocol==="https:" ? "wss:" : "ws:";
-    return proto + "//" + location.host;
-  }
-  function send(obj){
-    if(state.ws && state.ws.readyState===1) state.ws.send(JSON.stringify(obj));
-  }
+  if(codeFromUrl) el.code.value = codeFromUrl;
+
+  const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
+  let ws = null;
+  let joined = false;
+  let roomCode = null;
+  let playerId = null;
+
+  const input = { gas:0, brake:0, steer:0 };
+  let tiltEnabled = false;
+  let neutralBeta = 0;
+  let neutralGamma = 0;
+
   function connect(){
-    state.ws = new WebSocket(wsUrl());
-    connEl.textContent="connecting…";
-    state.ws.onopen=()=>{ connEl.textContent="connected"; };
-    state.ws.onclose=()=>{ connEl.textContent="disconnected"; setTimeout(connect,800); };
-    state.ws.onmessage=(ev)=>{
-      const msg=JSON.parse(ev.data);
-      if(msg.type==="joined"){
-        state.joined=true;
-        statusEl.textContent="Joined room " + (msg.room?.code||"") + " ✅";
+    ws = new WebSocket(wsUrl);
+    el.status.textContent = "Connecting…";
+    ws.addEventListener("open", () => {
+      el.status.textContent = "Connected";
+    });
+    ws.addEventListener("close", () => {
+      el.status.textContent = "Disconnected";
+      joined = false;
+    });
+    ws.addEventListener("message", (ev) => {
+      let msg; try{ msg = JSON.parse(ev.data); }catch{ return; }
+      if(msg.type === "join_ok"){
+        joined = true;
+        roomCode = msg.code;
+        playerId = msg.playerId;
+        el.status.textContent = "Joined: " + roomCode;
       }
-      if(msg.type==="error") statusEl.textContent=msg.message||"Error";
-    };
+      if(msg.type === "join_error"){
+        el.status.textContent = "Error: " + msg.message;
+      }
+    });
+  }
+  connect();
+
+  function send(obj){
+    if(ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
   }
 
-  function hold(btn, key){
-    const on=()=>{ state.input[key]=true; send({type:"input", input:state.input}); btn.classList.add("btn-primary"); };
-    const off=()=>{ state.input[key]=false; send({type:"input", input:state.input}); btn.classList.remove("btn-primary"); };
-    btn.addEventListener("touchstart",(e)=>{e.preventDefault(); on();},{passive:false});
-    btn.addEventListener("touchend",(e)=>{e.preventDefault(); off();},{passive:false});
-    btn.addEventListener("touchcancel",(e)=>{e.preventDefault(); off();},{passive:false});
-    btn.addEventListener("mousedown", on);
-    btn.addEventListener("mouseup", off);
-    btn.addEventListener("mouseleave", off);
-  }
-  hold(gasBtn,"gas"); hold(brakeBtn,"brake"); hold(leftBtn,"left"); hold(rightBtn,"right");
-
-  joinBtn.onclick=()=>{
-    const code=(roomInput.value||"").trim().toUpperCase();
-    const name=(nameInput.value||"").trim() || "Player";
-    if(code.length!==4){ statusEl.textContent="Enter a 4-letter room code."; return; }
-    send({type:"join_room", code, name});
-    statusEl.textContent="Joining…";
-  };
-
-  // URL param room
-  const params=new URLSearchParams(location.search);
-  const rp=params.get("room");
-  if(rp) roomInput.value = rp.toUpperCase().slice(0,4);
-
-  async function calibrate(){
-    // iOS permission gate
-    if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function"){
-      const res = await DeviceMotionEvent.requestPermission().catch(()=>null);
-      if(res !== "granted"){ statusEl.textContent="Motion permission denied."; return; }
+  el.join.addEventListener("click", () => {
+    const name = (el.name.value || "Player").trim();
+    const code = (el.code.value || "").trim().toUpperCase();
+    if(!code || code.length < 4){
+      el.status.textContent = "Enter 4-letter room code";
+      return;
     }
-    statusEl.textContent="Calibrated ✅";
-    // tilt0 will be set on next orientation event
-    state.tilt0 = null;
-  }
-  calBtn.onclick=calibrate;
-
-  window.addEventListener("deviceorientation",(e)=>{
-    const gamma=(e.gamma ?? 0);
-    if(state.tilt0===null) state.tilt0 = gamma;
-    const tilt = ((gamma - state.tilt0)/35) * state.tiltScale;
-    const clamped = Math.max(-1, Math.min(1, tilt));
-    state.input.tilt = clamped;
-    tiltReadout.textContent="tilt: " + clamped.toFixed(2);
-    if(state.joined) send({type:"input", input:state.input});
+    send({type:"player_join", name, code});
   });
 
-  connect();
+  // button inputs
+  function bindHold(btn, onDown, onUp){
+    const down = (e)=>{ e.preventDefault(); onDown(); };
+    const up = (e)=>{ e.preventDefault(); onUp(); };
+    btn.addEventListener("touchstart", down, {passive:false});
+    btn.addEventListener("touchend", up, {passive:false});
+    btn.addEventListener("touchcancel", up, {passive:false});
+    btn.addEventListener("mousedown", down);
+    btn.addEventListener("mouseup", up);
+    btn.addEventListener("mouseleave", up);
+  }
+
+  bindHold(el.gas, ()=>{input.gas=1;}, ()=>{input.gas=0;});
+  bindHold(el.brake, ()=>{input.brake=1;}, ()=>{input.brake=0;});
+  bindHold(el.left, ()=>{input.steer=-1;}, ()=>{ if(input.steer<0) input.steer=0; });
+  bindHold(el.right, ()=>{input.steer=1;}, ()=>{ if(input.steer>0) input.steer=0; });
+
+  // gyro / tilt steering
+  async function requestTiltPermission(){
+    // iOS requires requestPermission()
+    if(typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function"){
+      const res = await DeviceOrientationEvent.requestPermission();
+      return res === "granted";
+    }
+    return true; // Android/others
+  }
+
+  el.enableTilt.addEventListener("click", async () => {
+    const ok = await requestTiltPermission().catch(()=>false);
+    if(!ok){
+      el.status.textContent = "Tilt permission denied";
+      return;
+    }
+    tiltEnabled = true;
+    el.status.textContent = joined ? ("Joined: " + roomCode + " (tilt on)") : "Tilt enabled";
+  });
+
+  el.calibrate.addEventListener("click", () => {
+    neutralBeta = lastBeta;
+    neutralGamma = lastGamma;
+    el.status.textContent = joined ? ("Joined: " + roomCode + " (calibrated)") : "Calibrated";
+  });
+
+  let lastBeta=0, lastGamma=0;
+  window.addEventListener("deviceorientation", (ev) => {
+    if(!tiltEnabled) return;
+    // gamma: left-right (-90..90). beta: front-back (-180..180)
+    lastBeta = ev.beta ?? 0;
+    lastGamma = ev.gamma ?? 0;
+    const g = (lastGamma - neutralGamma);
+    // normalize to [-1,1]
+    const steer = Math.max(-1, Math.min(1, g / 25));
+    input.steer = steer;
+    el.steerVal.textContent = steer.toFixed(2);
+  });
+
+  // send input at 30Hz
+  setInterval(() => {
+    if(!joined || !roomCode || !playerId) return;
+    send({type:"player_input", code: roomCode, playerId, gas: !!input.gas, brake: !!input.brake, steer: input.steer});
+  }, 33);
 })();

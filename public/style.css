@@ -1,0 +1,71 @@
+:root{
+  --bg:#061428;
+  --panel:#0b2342;
+  --panel2:#0d2a52;
+  --text:#e9f2ff;
+  --muted:#9bb3d6;
+  --hot:#ff7a18;
+  --hot2:#ff9b3d;
+  --btn:#173a63;
+  --danger:#ff4d4d;
+}
+*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{margin:0;background:radial-gradient(1200px 800px at 30% 20%, #0c2f5b 0%, var(--bg) 60%);color:var(--text);}
+#topbar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(180deg,var(--panel2),var(--panel));border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:baseline;gap:8px}
+.tag{color:var(--muted);font-size:12px}
+.spacer{flex:1}
+.pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);font-size:13px;color:var(--muted)}
+.btn{padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#12335a,#0d2543);color:var(--text);cursor:pointer;font-weight:700}
+.btn:hover{filter:brightness(1.08)}
+.btn.primary{background:linear-gradient(180deg,var(--hot2),var(--hot));border-color:rgba(0,0,0,.2);color:#1a0b00}
+.btn.toggle.on{outline:2px solid rgba(255,122,24,.4)}
+.btn.danger{background:linear-gradient(180deg,#ff6b6b,#ff4242);border-color:rgba(0,0,0,.2);color:#2b0000}
+
+#controls{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+label{color:var(--muted);font-size:13px}
+select,input{padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);color:var(--text);min-width:160px}
+.hint{margin-top:8px;color:var(--muted);font-size:12px}
+
+#layout{display:grid;grid-template-columns:1fr 340px;gap:12px;padding:12px}
+#stageWrap{position:relative;background:rgba(0,0,0,.20);border:1px solid rgba(255,255,255,.10);border-radius:16px;overflow:hidden}
+canvas{width:100%;height:auto;display:block;background:
+  radial-gradient(2px 2px at 10% 10%, rgba(255,255,255,.20) 0%, transparent 50%),
+  radial-gradient(1.6px 1.6px at 70% 30%, rgba(255,255,255,.15) 0%, transparent 50%),
+  radial-gradient(1.2px 1.2px at 40% 80%, rgba(255,255,255,.12) 0%, transparent 50%),
+  linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+}
+
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+#overlay.hidden{display:none}
+.modal{background:linear-gradient(180deg,var(--hot2),var(--hot));border-radius:18px;padding:22px 26px;min-width:280px;text-align:center;color:#1a0b00;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal .title{font-size:26px;font-weight:900;letter-spacing:.5px}
+.modal .name{margin-top:6px;font-size:18px;font-weight:800}
+.modal .btn{margin-top:14px}
+
+#sidebar{display:flex;flex-direction:column;gap:12px}
+.card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px}
+.cardTitle{font-weight:900}
+.cardSub{color:var(--muted);font-size:12px;margin-top:4px}
+.small{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.35}
+.muted{opacity:.85}
+
+.pieceGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.pieceBtn{padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);color:var(--text);cursor:pointer;font-weight:800}
+.pieceBtn:hover{filter:brightness(1.08)}
+.pieceBtn.danger{background:rgba(255,77,77,.18);border-color:rgba(255,77,77,.35)}
+
+.players{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.playerRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08)}
+.dot{width:12px;height:12px;border-radius:999px;border:1px solid rgba(255,255,255,.25)}
+.playerName{font-weight:800}
+.playerMeta{color:var(--muted);font-size:12px}
+
+.controller{background:radial-gradient(900px 900px at 50% 10%, #0c2f5b 0%, var(--bg) 60%);min-height:100vh}
+.ctrlWrap{max-width:520px;margin:0 auto;padding:14px}
+.ctrlHeader{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 12px}
+.ctrlCard{margin-bottom:12px}
+.pad{display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center}
+.padBtn{width:min(440px, 90vw);padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.22);color:var(--text);font-size:18px;font-weight:900}
+.padBtn.big{padding:22px;font-size:20px}

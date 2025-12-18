@@ -1,55 +1,53 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no"/>
-  <title>Controller</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Phone Controller</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body class="controller">
-  <header class="topbar">
-    <div class="brand">
-      <span class="dot"></span>
-      <div>
-        <div class="title">Phone Controller</div>
-        <div class="subtitle" id="sub">Buttons + tilt steering</div>
-      </div>
+  <div class="ctrlWrap">
+    <div class="ctrlHeader">
+      <div class="brand">📱 <b>Phone Controller</b></div>
+      <div class="small">Tilt steering + buttons</div>
     </div>
-    <span class="pill" id="conn">connecting…</span>
-  </header>
 
-  <main class="controller-wrap">
-    <div class="card">
+    <div class="card ctrlCard">
       <div class="row">
-        <label class="label">Room</label>
-        <input id="room" class="input" maxlength="4" />
+        <input id="name" placeholder="Your name" maxlength="18"/>
+        <input id="code" placeholder="Room code" maxlength="4" style="text-transform:uppercase"/>
       </div>
       <div class="row">
-        <label class="label">Name</label>
-        <input id="name" class="input" maxlength="18" placeholder="Your name"/>
+        <button id="join" class="btn primary">Join Room</button>
+        <div class="pill" id="status">Not connected</div>
       </div>
-      <button id="join" class="btn btn-primary btn-wide">Join Room</button>
-      <div id="joinStatus" class="small"></div>
-    </div>
-
-    <div class="card">
-      <div class="pad">
-        <button id="gas" class="btn btn-wide">⬆️ GAS</button>
-        <div class="row3">
-          <button id="left" class="btn">⬅️</button>
-          <button id="right" class="btn">➡️</button>
-        </div>
-        <button id="brake" class="btn btn-wide">⬇️ BRAKE</button>
+      <div class="small">
+        iPhone/iPad: tap <b>Enable Tilt</b> and allow permission when prompted.
       </div>
     </div>
 
-    <div class="card">
-      <div class="panel-title">Tilt steering tuning</div>
-      <div class="small">Lean phone left/right to steer. Tap Calibrate to re-center (iPhone may ask permission).</div>
-      <button id="cal" class="btn btn-wide">Calibrate Tilt</button>
-      <div class="small" id="tiltReadout">tilt: 0.00</div>
+    <div class="card ctrlCard">
+      <div class="row">
+        <button id="enableTilt" class="btn">Enable Tilt</button>
+        <button id="calibrate" class="btn">Calibrate</button>
+        <div class="pill">Steer: <b id="steerVal">0.00</b></div>
+      </div>
     </div>
-  </main>
+
+    <div class="pad">
+      <button id="gas" class="padBtn big">⬆️ GAS</button>
+      <div class="row">
+        <button id="left" class="padBtn">⬅️</button>
+        <button id="right" class="padBtn">➡️</button>
+      </div>
+      <button id="brake" class="padBtn big">⬇️ BRAKE</button>
+    </div>
+
+    <div class="small muted">
+      Tip: keep your phone flat, then tap Calibrate.
+    </div>
+  </div>
 
   <script src="controller.js"></script>
 </body>

@@ -1,90 +1,94 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>HotWheels Multiplayer Racer (Host)</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <title>HotWheels Multiplayer Racer (Top-down Arcade v5)</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="dot"></span>
-      <div>
-        <div class="title">HotWheels Multiplayer Racer</div>
-        <div class="subtitle">Top-down arcade v4.1</div>
-      </div>
-    </div>
+  <div id="topbar">
+    <div class="brand">🏁 <b>HotWheels Multiplayer Racer</b> <span class="tag">Top-down arcade v5</span></div>
 
-    <div class="controls">
-      <button id="btnCopy" class="btn">Copy Controller Link</button>
-      <button id="btnCreate" class="btn btn-primary">Create Room</button>
-      <span class="pill" id="roomCode">----</span>
-      <span class="pill" id="connPill">Server: connecting…</span>
-    </div>
-  </header>
+    <button id="btnCreate" class="btn primary">Create Room</button>
+    <div class="pill">Room: <b id="roomCode">----</b></div>
+    <button id="btnCopy" class="btn">Copy Controller Link</button>
 
-  <section class="toolbar">
-    <div class="toolbar-left">
-      <label class="label">Track</label>
-      <select id="presetSelect" class="select"></select>
+    <div class="spacer"></div>
 
-      <label class="label">Laps to win</label>
-      <select id="lapsToWin" class="select">
-        <option>1</option><option selected>3</option><option>5</option><option>7</option><option>9</option>
+    <div class="pill" id="wsStatus">Server: connecting…</div>
+  </div>
+
+  <div id="controls">
+    <div class="row">
+      <label>Track</label>
+      <select id="trackSelect"></select>
+
+      <label>Laps to win</label>
+      <select id="lapsToWin">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="5">5</option>
       </select>
 
-      <button id="btnMode" class="btn">Drive Mode</button>
+      <button id="btnBuild" class="btn toggle on">Build Mode</button>
+      <button id="btnDrive" class="btn toggle">Drive Mode</button>
       <button id="btnReset" class="btn">Reset Cars</button>
-      <button id="btnClear" class="btn">Clear (custom)</button>
+      <button id="btnClear" class="btn">Clear Custom</button>
     </div>
 
-    <div class="toolbar-right">
-      <div class="hint">Design Mode: drag pieces • Rotate: +90 repeatedly • Snap-valid only • Finish line required</div>
+    <div class="hint">
+      Build Mode: pick a preset or build a custom closed loop (must include a Finish Line). Pieces snap only when valid. Rotate +90 repeatedly by clicking a placed piece.
     </div>
-  </section>
+  </div>
 
-  <main class="layout">
-    <div class="stage">
-      <canvas id="canvas" width="1200" height="700"></canvas>
-      <div id="winnerOverlay" class="winner hidden">
-        <div class="winner-card">
-          <div class="winner-title">WINNER!</div>
-          <div class="winner-name" id="winnerName">—</div>
-          <button id="btnBackToBuild" class="btn btn-primary">Back to Build</button>
+  <div id="layout">
+    <div id="stageWrap">
+      <canvas id="c" width="1200" height="700"></canvas>
+      <div id="overlay" class="hidden">
+        <div class="modal">
+          <div class="title">WINNER!</div>
+          <div class="name" id="winnerName">—</div>
+          <button id="btnBackToBuild" class="btn primary">Back to Build</button>
         </div>
       </div>
     </div>
 
-    <aside class="sidebar">
-      <div class="panel">
-        <div class="panel-title">Hot Wheels vibe</div>
-        <div class="panel-sub">Orange track • decals • finish banner • 3-wide racing</div>
+    <div id="sidebar">
+      <div class="card">
+        <div class="cardTitle">Hot Wheels vibe</div>
+        <div class="cardSub">Orange 3‑lane track • decals • finish banner • loops</div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">Pieces (drag onto the grid)</div>
-        <div id="pieces"></div>
+      <div class="card">
+        <div class="cardTitle">Pieces (custom builder)</div>
+        <div class="pieceGrid">
+          <button class="pieceBtn" data-piece="straight">Straight</button>
+          <button class="pieceBtn" data-piece="curveR">Curve (R)</button>
+          <button class="pieceBtn" data-piece="curveL">Curve (L)</button>
+          <button class="pieceBtn" data-piece="loop">Loop Segment</button>
+          <button class="pieceBtn" data-piece="finish">Finish Line</button>
+          <button class="pieceBtn danger" data-piece="erase">Eraser</button>
+        </div>
         <div class="small">
-          <b>Build controls</b>
-          <ul>
-            <li>Click a piece button, then click grid to place</li>
-            <li>Click a placed piece to rotate +90 (repeatable)</li>
-            <li>Right-click a placed piece to delete</li>
-            <li>Pieces snap to grid and only valid connectors are allowed</li>
-          </ul>
+          Click a piece, then click grid to place. Click placed piece to rotate +90. Right‑click to delete.
+          Builder only accepts valid connector snaps.
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">Players</div>
-        <div id="players" class="players"></div>
+      <div class="card">
+        <div class="cardTitle">Players</div>
+        <div id="playersList" class="players"></div>
       </div>
-    </aside>
-  </main>
+
+      <div class="card small">
+        <b>Controller URL:</b> <span id="ctrlUrl">(create a room)</span>
+      </div>
+    </div>
+  </div>
 
   <script src="tracks.js"></script>
-  <script src="tracklib.js"></script>
   <script src="host.js"></script>
 </body>
 </html>
