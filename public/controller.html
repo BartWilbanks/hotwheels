@@ -1,251 +1,56 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no"/>
   <title>Controller</title>
-  <style>
-    :root{
-      --navy:#0A2342; --green:#6BBF59; --orange:#ff6a00;
-      --bg:#070c18; --panel:#111c34; --muted:rgba(255,255,255,.75);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,Segoe UI,Arial;background:radial-gradient(800px 500px at 30% 20%, #1a2d58 0%, #090f20 60%, #060a14 100%);color:#fff}
-    #wrap{max-width:520px;margin:0 auto;padding:14px}
-    h2{margin:6px 0 4px 0}
-    .muted{color:var(--muted)}
-    .card{
-      background:linear-gradient(180deg, var(--panel), #0b1226);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;padding:12px;
-      box-shadow:0 16px 40px rgba(0,0,0,.25);
-    }
-    input, button{font:inherit}
-    input[type="text"]{
-      width:100%;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);
-      background:#0e1833;color:#fff;
-    }
-    button{
-      width:100%;padding:12px;border-radius:14px;border:0;background:var(--green);color:var(--navy);
-      font-weight:900;cursor:pointer;
-    }
-    button.secondary{
-      background:#18264a;color:#fff;border:1px solid rgba(255,255,255,.14);
-    }
-    .grid{
-      display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;
-    }
-    .btn{
-      height:84px;border-radius:18px;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(180deg, #ffffff, #d7d7d7);
-      color:#101010;font-weight:900;font-size:18px;border:1px solid rgba(0,0,0,.15);
-      touch-action:none; user-select:none;
-    }
-    .btn:active{transform:scale(.98)}
-    .btn.orange{
-      background:linear-gradient(180deg, var(--orange), #ff8a2b);
-      color:#201002;border:1px solid rgba(255,255,255,.18);
-    }
-    .row{display:flex;gap:10px;align-items:center}
-    .small{font-size:12px}
-    input[type="range"]{width:100%}
-    #statusPill{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14)}
-  </style>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
-<body>
-  <div id="wrap">
+<body class="controller">
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <div>
+        <div class="title">Phone Controller</div>
+        <div class="subtitle" id="sub">Buttons + tilt steering</div>
+      </div>
+    </div>
+    <span class="pill" id="conn">connecting…</span>
+  </header>
+
+  <main class="controller-wrap">
     <div class="card">
-      <h2>📱 Phone Controller</h2>
-      <div class="muted small">Join the room and steer with buttons or by leaning your phone.</div>
+      <div class="row">
+        <label class="label">Room</label>
+        <input id="room" class="input" maxlength="4" />
+      </div>
+      <div class="row">
+        <label class="label">Name</label>
+        <input id="name" class="input" maxlength="18" placeholder="Your name"/>
+      </div>
+      <button id="join" class="btn btn-primary btn-wide">Join Room</button>
+      <div id="joinStatus" class="small"></div>
+    </div>
 
-      <div style="margin-top:10px">
-        <div class="row">
-          <div style="flex:1">
-            <div class="small muted">Room code</div>
-            <input id="room" type="text" placeholder="ABCD" maxlength="4" />
-          </div>
-          <div style="flex:1">
-            <div class="small muted">Name</div>
-            <input id="name" type="text" placeholder="Bart" maxlength="16" />
-          </div>
+    <div class="card">
+      <div class="pad">
+        <button id="gas" class="btn btn-wide">⬆️ GAS</button>
+        <div class="row3">
+          <button id="left" class="btn">⬅️</button>
+          <button id="right" class="btn">➡️</button>
         </div>
-        <div style="margin-top:10px" class="row">
-          <button id="join">Join Room</button>
-        </div>
-        <div style="margin-top:8px" class="small">
-          <span id="statusPill">Not connected</span>
-        </div>
+        <button id="brake" class="btn btn-wide">⬇️ BRAKE</button>
       </div>
     </div>
 
-    <div class="card" style="margin-top:12px">
-      <div class="row" style="justify-content:space-between">
-        <b>Controls</b>
-        <button class="secondary" id="calibrate" style="width:auto;padding:8px 10px;border-radius:12px">Calibrate Tilt</button>
-      </div>
-
-      <div class="grid">
-        <div class="btn orange" id="up">⬆ GAS</div>
-        <div class="btn" id="brake">⬇ BRAKE</div>
-        <div class="btn" id="left">⬅ LEFT</div>
-        <div class="btn" id="right">➡ RIGHT</div>
-      </div>
-
-      <div style="margin-top:12px">
-        <b>Tilt steering tuning</b>
-        <div class="small muted" style="margin-top:6px">If tilt feels too sensitive or too weak, adjust these.</div>
-
-        <div style="margin-top:10px">
-          <div class="small muted">Sensitivity</div>
-          <input id="sens" type="range" min="0.5" max="3.0" step="0.1" value="1.6" />
-        </div>
-        <div style="margin-top:10px">
-          <div class="small muted">Deadzone</div>
-          <input id="dead" type="range" min="0.0" max="10.0" step="0.5" value="2.0" />
-        </div>
-        <div style="margin-top:10px" class="small muted">
-          Tip: On iPhone, you may need to allow motion access when prompted.
-        </div>
-      </div>
+    <div class="card">
+      <div class="panel-title">Tilt steering tuning</div>
+      <div class="small">Lean phone left/right to steer. Tap Calibrate to re-center (iPhone may ask permission).</div>
+      <button id="cal" class="btn btn-wide">Calibrate Tilt</button>
+      <div class="small" id="tiltReadout">tilt: 0.00</div>
     </div>
-  </div>
+  </main>
 
-<script>
-(() => {
-  const roomEl = document.getElementById('room');
-  const nameEl = document.getElementById('name');
-  const joinBtn = document.getElementById('join');
-  const statusPill = document.getElementById('statusPill');
-
-  const upEl = document.getElementById('up');
-  const brakeEl = document.getElementById('brake');
-  const leftEl = document.getElementById('left');
-  const rightEl = document.getElementById('right');
-
-  const sensEl = document.getElementById('sens');
-  const deadEl = document.getElementById('dead');
-  const calibrateBtn = document.getElementById('calibrate');
-
-  let ws=null;
-  let room=null;
-  let playerId=null;
-
-  const state = { up:false, down:false, left:false, right:false, steer:0 };
-
-  // prefill room from URL
-  const qs = new URLSearchParams(location.search);
-  if (qs.get('room')) roomEl.value = qs.get('room').toUpperCase();
-
-  function wsUrl(){
-    const proto = (location.protocol === 'https:') ? 'wss:' : 'ws:';
-    return `${proto}//${location.host}/ws`;
-  }
-  function send(obj){ if (ws?.readyState===1) ws.send(JSON.stringify(obj)); }
-  function setStatus(text, ok=false){
-    statusPill.textContent=text;
-    statusPill.style.background = ok ? "rgba(107,191,89,.25)" : "rgba(255,255,255,.10)";
-    statusPill.style.borderColor = ok ? "rgba(107,191,89,.55)" : "rgba(255,255,255,.14)";
-  }
-
-  async function connect(){
-    ws = new WebSocket(wsUrl());
-    await new Promise((res, rej)=>{ ws.onopen=res; ws.onerror=rej; });
-    ws.onmessage = (ev)=>handle(JSON.parse(ev.data));
-  }
-
-  function handle(msg){
-    if (!msg?.t) return;
-    if (msg.t === 'error'){
-      setStatus(msg.message || 'Error', false);
-    }
-    if (msg.t === 'joined'){
-      room = msg.room;
-      playerId = msg.playerId;
-      setStatus(`Joined ${room}`, true);
-      startSending();
-    }
-    if (msg.t === 'announce' && msg.winner){
-      // quick vibration (if supported)
-      try{ navigator.vibrate?.([80,40,80]); }catch{}
-    }
-  }
-
-  joinBtn.onclick = async () => {
-    room = roomEl.value.trim().toUpperCase();
-    const name = (nameEl.value.trim() || 'Player').slice(0,16);
-    if (!room || room.length < 3){ setStatus('Enter room code', false); return; }
-    setStatus('Connecting…', false);
-    try{
-      await connect();
-      send({ t:'join', room, name });
-      setStatus('Joining…', false);
-    }catch(e){
-      setStatus('Connection failed', false);
-    }
-  };
-
-  // Button touch handling
-  function bindHold(el, onDown, onUp){
-    const down = (e)=>{ e.preventDefault(); onDown(); };
-    const up = (e)=>{ e.preventDefault(); onUp(); };
-    el.addEventListener('pointerdown', down);
-    el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
-    el.addEventListener('pointerleave', up);
-  }
-  bindHold(upEl, ()=>state.up=true, ()=>state.up=false);
-  bindHold(brakeEl, ()=>state.down=true, ()=>state.down=false);
-  bindHold(leftEl, ()=>state.left=true, ()=>state.left=false);
-  bindHold(rightEl, ()=>state.right=true, ()=>state.right=false);
-
-  // Tilt steering
-  let tiltZero = 0;
-  calibrateBtn.onclick = async () => {
-    // iOS permission
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
-      try{
-        const p = await DeviceOrientationEvent.requestPermission();
-        if (p !== 'granted'){ setStatus('Motion permission denied', false); return; }
-      }catch{ setStatus('Motion permission blocked', false); return; }
-    }
-    tiltZero = lastGamma || 0;
-    try{ navigator.vibrate?.(50); }catch{}
-  };
-
-  let lastGamma = 0;
-  window.addEventListener('deviceorientation', (e)=>{
-    // gamma: left/right tilt (-90..90)
-    if (typeof e.gamma === 'number') lastGamma = e.gamma;
-  }, { passive:true });
-
-  function computeSteer(){
-    const sens = parseFloat(sensEl.value) || 1.6;
-    const dead = parseFloat(deadEl.value) || 2.0;
-    let g = (lastGamma - tiltZero);
-    if (Math.abs(g) < dead) g = 0;
-    // normalize to [-1,1] roughly (30 degrees ~ full)
-    let s = (g / 30) * sens;
-    s = Math.max(-1, Math.min(1, s));
-    return s;
-  }
-
-  let sendTimer=null;
-  function startSending(){
-    if (sendTimer) return;
-    sendTimer = setInterval(()=>{
-      if (!room || !playerId) return;
-      // combine: if buttons pressed, they override tilt; otherwise use tilt
-      let steer = 0;
-      if (state.left || state.right){
-        steer = (state.left?-1:0) + (state.right?1:0);
-      } else {
-        steer = computeSteer();
-      }
-      const inputs = { up:state.up, down:state.down, left:state.left, right:state.right, steer };
-      send({ t:'input', room, playerId, inputs });
-    }, 50); // 20Hz
-  }
-})();
-</script>
+  <script src="controller.js"></script>
 </body>
 </html>
