@@ -1,20 +1,19 @@
-# Hotwheels-Style Multiplayer Racer (MVP)
+# HotWheels Multiplayer Racer (Top-down arcade) v4
 
-This project hosts:
-- `index.html` (Host screen) — create room, build track, run race simulation
-- `controller.html` (Phone controllers) — join by room code, steer/gas/brake
-- WebSocket server (`server.js`) — rooms + realtime inputs
+## Run locally
+1) Install Node.js
+2) In this folder:
+   npm install
+   npm start
+3) Open:
+   Host:       http://localhost:3000/
+   Controller: http://localhost:3000/controller.html
 
-## Local run
-```bash
-npm install
-npm start
-```
-
-Then open:
-- Host: http://localhost:3000/
-- Controller: http://localhost:3000/controller.html
+## Deploy to Render (Web Service)
+- Build Command: npm install
+- Start Command: npm start
+- Root Directory: (blank)
 
 ## Notes
-- Rooms are in-memory only (reset when server restarts).
-- This is an MVP (no lap counting, collisions, or validation of connected track pieces yet).
+- Rooms are in-memory. If Render restarts, room codes reset.
+- Host creates a room; phones join using the room code.
